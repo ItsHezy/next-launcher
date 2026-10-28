@@ -1,0 +1,3 @@
+# Section 9: no unwrap()/expect() outside tests and startup invariants.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true

@@ -1,0 +1,295 @@
+/* Next Launcher: global styles and design tokens (brief section 6).
+ *
+ * Contrast rules (measured, see docs/perf.md "Contrast"):
+ *  - --text-3 is only used on --bg or --surface-inset (4.56:1). On --surface use --text-2.
+ *  - Accent never colours text directly: use --accent-text (≥ 5.28:1 on surfaces).
+ *  - Filled accent controls with text use --accent-fill (white ≥ 5.46:1 for all accents).
+ *  - Text on a --selected background is always --text.
+ */
+
+/* Latin Inter is registered from main.ts (FontFace API) so it loads in parallel
+ * with mounting; latin-ext loads on demand from here. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../assets/fonts/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  --bg: #26282a;
+  --surface: #2e3033;
+  --surface-inset: #26282a;
+  --control: rgba(0, 0, 0, 0.22);
+  --hover: rgba(255, 255, 255, 0.06);
+  --selected: rgba(255, 255, 255, 0.12);
+  --selected-strong: rgba(255, 255, 255, 0.16);
+  --border: rgba(255, 255, 255, 0.07);
+  --text: #f2f2f5;
+  --text-2: #a7a7b2;
+  --text-3: #8e8e99;
+  --accent: #0a6fd6;
+  --accent-fill: color-mix(in srgb, var(--accent), #000 12%);
+  --accent-fill-hover: color-mix(in srgb, var(--accent), #000 4%);
+  --accent-text: color-mix(in srgb, var(--accent), #fff 45%);
+  --success: #7ee2a0;
+  --success-fill: #248a3d;
+  --warning: #ffd27a;
+  --danger: #ff8a80;
+
+  --radius-lg: 24px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+
+  --gap: 12px;
+  --sidebar-w: 248px;
+  --hit: 44px;
+
+  --ease-spring: cubic-bezier(0.2, 0.9, 0.25, 1.08);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 150ms;
+  --dur: 200ms;
+  --dur-slow: 250ms;
+
+  --font: 'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv11', 'ss01';
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  height: 100%;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+h2 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  min-height: var(--hit);
+}
+button:disabled {
+  cursor: default;
+}
+
+a {
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+input[type='text'],
+input[type='search'] {
+  background: var(--control);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  min-height: var(--hit);
+  padding: 0 14px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+input::placeholder {
+  color: var(--text-2);
+}
+input:focus-visible {
+  border-color: var(--accent-text);
+  outline: none;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ---- shared primitives ---------------------------------------------- */
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--hit);
+  padding: 0 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-spring);
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn-primary {
+  background: var(--accent-fill);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-fill-hover);
+}
+.btn-quiet {
+  background: var(--control);
+  color: var(--text);
+}
+.btn-quiet:hover:not(:disabled) {
+  background: var(--selected);
+}
+.btn-danger {
+  background: var(--control);
+  color: var(--danger);
+}
+.btn-danger:hover:not(:disabled) {
+  background: rgba(255, 138, 128, 0.12);
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: var(--hit);
+  height: var(--hit);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.icon-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.icon-btn[aria-expanded='true'],
+.icon-btn[aria-pressed='true'] {
+  background: var(--selected);
+  color: var(--text);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.status-ready {
+  color: var(--success);
+}
+.status-update {
+  color: var(--warning);
+}
+.status-muted {
+  color: var(--text-3);
+}
+.status-active {
+  color: var(--accent-text);
+}
+
+/* Floating menus and popovers. */
+.menu {
+  position: absolute;
+  z-index: 50;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+  padding: 8px;
+  transform-origin: top right;
+  animation: menu-in var(--dur) var(--ease-spring);
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

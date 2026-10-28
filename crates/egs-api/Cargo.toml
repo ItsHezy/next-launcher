@@ -1,0 +1,13 @@
+[package]
+name = "egs-api"
+description = "Typed HTTP client for Epic's account, library, catalog, store, wallet and save services."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true
