@@ -1,0 +1,26 @@
+# Build output
+/target/
+**/target/
+/ui/node_modules/
+/ui/dist/
+node_modules/
+*.pdb
+
+# Research: third-party reference sources (GPL / unlicensed) and raw probe output
+# stay local. Only our own notes under research/*.md are committed.
+/research/refs/
+/research/probe/
+/research/captures/
+
+# Local dev data
+/test-installs/
+/.dev-data/
+*.log
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
