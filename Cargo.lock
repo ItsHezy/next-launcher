@@ -979,6 +979,13 @@ version = "0.1.0"
 [[package]]
 name = "egs-import"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tracing",
+]
 
 [[package]]
 name = "egs-launch"
@@ -2414,6 +2421,7 @@ dependencies = [
  "egs-api",
  "egs-auth",
  "egs-cache",
+ "egs-import",
  "regex-lite",
  "serde",
  "serde_json",

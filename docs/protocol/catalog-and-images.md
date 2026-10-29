@@ -17,7 +17,9 @@ Every catalog item and store offer has `keyImages: [{type, url, width?, height?,
 
 Types observed in the free-games feed (2026-10-28): `GalleryImage`, `OfferImageTall`,
 `OfferImageWide`, `OgImage`, `Thumbnail`, `featuredMedia`, `heroCarouselVideo`. **[OBS]**
-Phase 3 records the full set of types seen in the real library and updates this table.
+Real library, Phase 3 (38 games) **[OBS]**: `DieselGameBoxTall` 36, `DieselGameBox` 36,
+`OfferImageTall` 2, `OfferImageWide` 2, `Thumbnail` 2, `DieselGameBoxLogo` 2, `Featured` 1,
+`AndroidIcon` 1. The tall/wide preference lists above covered every game; 76/76 covers downloaded.
 
 ## Image CDN — [OBS]
 

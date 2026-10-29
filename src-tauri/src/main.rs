@@ -3,6 +3,8 @@
 mod auth;
 mod commands;
 mod console;
+mod import;
+mod library;
 mod logging;
 mod paths;
 mod protocol;
@@ -40,8 +42,8 @@ fn parse_args() -> Args {
         bench: false,
         bench_scroll: false,
         dev_route: None,
-        // Phase 1: the library is mock data. Phase 3 replaces this with sync.
-        mock_games: 48,
+        // Mock data only on request (benchmarks); the real library comes from sync.
+        mock_games: 0,
         data_dir: None,
         reset: false,
     };
@@ -80,8 +82,16 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             auth::sign_out,
             auth::open_epic_page,
             auth::open_corrective_action,
+            library::refresh_library,
+            library::sync_status,
+            import::egl_import_scan,
+            import::egl_adopt,
         ])
-        .events(tauri_specta::collect_events![auth::AuthChanged])
+        .events(tauri_specta::collect_events![
+            auth::AuthChanged,
+            library::LibraryChanged,
+            library::SyncStatusChanged
+        ])
 }
 
 struct Boot {
@@ -234,6 +244,7 @@ fn main() {
                 shown: AtomicBool::new(false),
             });
             app.manage(auth::AuthState::new(api_client()?, boot.auth));
+            app.manage(library::LibraryState::default());
 
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Next Launcher")

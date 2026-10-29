@@ -11,6 +11,8 @@ pub struct Paths {
     pub db: PathBuf,
     pub logs: PathBuf,
     pub images: PathBuf,
+    /// Copies of installed builds' manifests (updates, verify, uninstall).
+    pub manifests: PathBuf,
     pub webview_ui: PathBuf,
     /// Epic login + signed-in Epic pages share one profile, so the login cookie
     /// also signs in account pages (ADR 0002, revised in Phase 2).
@@ -24,6 +26,7 @@ impl Paths {
             db: root.join("next-launcher.sqlite3"),
             logs: root.join("logs"),
             images: root.join("images"),
+            manifests: root.join("manifests"),
             webview_ui: root.join("webview").join("ui"),
             webview_web: root.join("webview").join("web"),
             root,
@@ -31,7 +34,13 @@ impl Paths {
     }
 
     pub fn ensure(&self) -> std::io::Result<()> {
-        for dir in [&self.root, &self.logs, &self.images, &self.webview_ui] {
+        for dir in [
+            &self.root,
+            &self.logs,
+            &self.images,
+            &self.manifests,
+            &self.webview_ui,
+        ] {
             std::fs::create_dir_all(dir)?;
         }
         Ok(())

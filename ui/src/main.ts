@@ -22,6 +22,7 @@ import App from './App.svelte';
 import { commands } from './lib/bindings';
 import { boot } from './lib/boot';
 import { auth } from './lib/state/auth.svelte';
+import { library } from './lib/state/library.svelte';
 
 async function start() {
   // Cap the wait: a broken font must never block the app (timers are throttled
@@ -50,8 +51,9 @@ async function start() {
   ];
   await commands.appReady({ now: performance.now(), marks });
 
-  // After first paint: follow the session that Rust is restoring.
+  // After first paint: follow the session that Rust is restoring, and library changes.
   void auth.init();
+  void library.init();
 
   if (boot.devRoute) {
     const { applyDevRoute } = await import('./lib/dev');

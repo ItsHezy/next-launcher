@@ -1,5 +1,11 @@
 # Library: owned items, builds, entitlements, playtime
 
+**Phase 3 live check (2026-10-29, owner's account):** assets, library items (with state token),
+catalog bulk items, and playtime all worked as specced below: 62 library records → 38 applications,
+all 38 with a Windows asset; catalog fetched for 38/38; playtime totals for 27; a second sync with a
+still-valid state token took 742 ms and fetched no catalog data. Tags below that say [REF] for these
+endpoints are now confirmed [OBS].
+
 Crate: `egs-api::library`, synced into `egs-cache` by `src-tauri`'s library service.
 
 Hosts: `LAUNCHER` = `launcher-public-service-prod06.ol.epicgames.com`,

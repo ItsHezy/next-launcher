@@ -1,10 +1,13 @@
 <script lang="ts">
   import { dismiss, menuKeys } from '../../lib/actions';
   import AuthBanner from '../../lib/components/AuthBanner.svelte';
+  import Icon from '../../lib/components/Icon.svelte';
+  import { ago } from '../../lib/format';
+  import { auth } from '../../lib/state/auth.svelte';
   import Segmented from '../../lib/components/Segmented.svelte';
   import { library, type Filter, type Game, type Sort } from '../../lib/state/library.svelte';
   import { settings } from '../../lib/state/settings.svelte';
-  import { comingSoon } from '../../lib/state/ui.svelte';
+  import { comingSoon, ui } from '../../lib/state/ui.svelte';
   import GameGrid from './GameGrid.svelte';
   import RecentCard from './RecentCard.svelte';
 
@@ -22,9 +25,25 @@
   ]);
 
   function play(g: Game) {
-    if (g.state === 'notInstalled') comingSoon('Installing games', 4);
+    if (g.state === 'notInstalled' && g.thirdParty) comingSoon(`Opening ${g.thirdParty}`, 5);
+    else if (g.state === 'notInstalled') comingSoon('Installing games', 4);
     else comingSoon('Launching games', 5);
   }
+
+  async function refresh() {
+    const err = await library.refresh();
+    if (err) ui.toast(err);
+  }
+
+  const syncLine = $derived(
+    library.sync.syncing
+      ? 'Syncing…'
+      : library.sync.error
+        ? library.sync.error
+        : library.sync.lastSync
+          ? `Synced ${ago(library.sync.lastSync)}`
+          : '',
+  );
 
   function openMenu(game: Game, x: number, y: number) {
     // Keyboard context-menu key reports 0,0: anchor to the focused element.
@@ -44,6 +63,19 @@
       <h1>Library</h1>
       <span class="count">{library.counts.all} {library.counts.all === 1 ? 'game' : 'games'}</span>
     </div>
+    <div class="tools">
+      {#if auth.signedIn}
+        <span class="sync" class:err={!!library.sync.error && !library.sync.syncing} aria-live="polite">{syncLine}</span>
+        <button
+          class="icon-btn"
+          class:spin={library.sync.syncing}
+          aria-label="Refresh library"
+          disabled={library.sync.syncing}
+          onclick={refresh}
+        >
+          <Icon name="update" size={18} />
+        </button>
+      {/if}
     <Segmented
       label="Filter games"
       size="sm"
@@ -51,6 +83,7 @@
       value={library.filter}
       onchange={(v) => (library.filter = v)}
     />
+    </div>
   </header>
 
   {#if showRecent}
@@ -71,7 +104,15 @@
     </h2>
     {#if games.length === 0}
       <p class="empty">
-        {library.query ? 'No games match your search.' : library.filter === 'updates' ? 'Everything is up to date.' : 'No games here yet.'}
+        {library.query
+          ? 'No games match your search.'
+          : library.filter === 'updates'
+            ? 'Everything is up to date.'
+            : library.sync.syncing
+              ? 'Getting your library from Epic…'
+              : auth.hasAccount
+                ? 'No games here yet.'
+                : 'Sign in to see your games.'}
       </p>
     {:else}
       <GameGrid {games} {scroller} onplay={play} onmenu={openMenu} />
@@ -116,6 +157,30 @@
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 28px;
+  }
+  .tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sync {
+    font-size: 13px;
+    color: var(--text-3);
+    max-width: 320px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sync.err {
+    color: var(--warning);
+  }
+  .spin :global(svg) {
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
   .title {
     display: flex;

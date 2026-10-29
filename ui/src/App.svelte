@@ -6,6 +6,7 @@
   import TopBar from './lib/components/TopBar.svelte';
   import { router, type Route } from './lib/state/router.svelte';
   import { applyAccent } from './lib/state/settings.svelte';
+  import { ui } from './lib/state/ui.svelte';
   import Library from './routes/library/Library.svelte';
 
   applyAccent();
@@ -74,6 +75,12 @@
     <div class="full" hidden={router.route !== 'settings'}>
       {#if SettingsView}<SettingsView />{/if}
     </div>
+  {/if}
+
+  {#if ui.dialog === 'import'}
+    {#await import('./lib/components/ImportDialog.svelte') then { default: ImportDialog }}
+      <ImportDialog />
+    {/await}
   {/if}
 
   {#if boot.bootError}

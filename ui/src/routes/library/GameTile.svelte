@@ -10,8 +10,18 @@
   }: { game: Game; onplay: (g: Game) => void; onmenu: (g: Game, x: number, y: number) => void } = $props();
 
   const installed = $derived(game.state === 'installed' || game.state === 'updateAvailable');
+  const external = $derived(!installed && !!game.thirdParty);
+  const unavailable = $derived(!installed && !game.installable && !game.thirdParty);
   const action = $derived(
-    game.state === 'notInstalled' ? 'Install' : game.state === 'installing' ? 'Installing' : 'Play',
+    external
+      ? `Open in ${game.thirdParty}:`
+      : unavailable
+        ? 'Not installable on Windows:'
+        : game.state === 'notInstalled'
+          ? 'Install'
+          : game.state === 'installing'
+            ? 'Installing'
+            : 'Play',
   );
 </script>
 
@@ -34,6 +44,10 @@
         <div class="st status-update">Update available</div>
       {:else if game.state === 'installing'}
         <div class="st status-active">Installing</div>
+      {:else if external}
+        <div class="st status-muted">Opens in {game.thirdParty}</div>
+      {:else if unavailable}
+        <div class="st status-muted">Not on Windows</div>
       {:else}
         <div class="st status-muted">Not installed</div>
       {/if}
@@ -42,10 +56,13 @@
       class="round"
       class:play={installed}
       aria-label="{action} {game.title}"
-      disabled={game.state === 'installing'}
+      disabled={game.state === 'installing' || unavailable}
       onclick={() => onplay(game)}
     >
-      <Icon name={installed ? 'play' : 'download'} size={installed ? 18 : 20} />
+      <Icon
+        name={installed ? 'play' : external ? 'external' : unavailable ? 'info' : 'download'}
+        size={installed ? 18 : 20}
+      />
     </button>
   </div>
 </div>

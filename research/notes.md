@@ -54,12 +54,24 @@ How each fact was obtained. Raw downloads and probe output live in `research/ref
 | L6 | No pending `epicgames_tos` agreement for this account | EULA tracking returned 204 |
 | L7 | **Exchange-code bridge works**: with the web profile deleted, `/id/exchange?exchangeCode=…&redirectUrl=accounts.epicgames.com/account/password` opened signed in | owner confirmed; app log `opening signed-in Epic page page=Password` |
 
+## Phase 3 live verification (2026-10-29, owner's account)
+
+| # | Finding | Evidence |
+|---|---|---|
+| L8 | Library items: 62 records, 38 `APPLICATION` records with `appName`; all 38 have a Windows asset | sync log (counts only) |
+| L9 | Catalog bulk items return `keyImages`, `releaseInfo[].appId`, `customAttributes`; batching per namespace worked (max batch size still untested, kept at 25) | sync log |
+| L10 | Real key image types (see catalog-and-images.md); tall/wide preference lists cover all games | sync log |
+| L11 | Playtime `all` works (27 artifacts with time); `releaseInfo.appId` matches playtime `artifactId` | DB counts |
+| L12 | Library state token stays valid across syncs when nothing changed (second sync 742 ms) | sync log |
+| L13 | 1 owned game is third-party managed (`ThirdPartyManagedApp`/`Provider`) | DB count |
+| L14 | EGL `.item` booleans are `bIsIncompleteInstall` etc. (lowercase `b`); PascalCase deserialisation misses them | unit test caught it |
+
 ## Open questions (carried into phases)
 
 | Question | Phase |
 |---|---|
 | exact action bits for account update, kill OTHERS, wallet, fulfillment (resources present, L5) | 7 |
-| real keyImage type set in the library, catalog bulk max ids | 3 |
+| catalog bulk max ids per request (25 works; larger untested) | 6 |
 | a small free test game the owner owns (Fortnite is unsuitable: huge + anti-cheat) | 4 |
 | store "Featured" source, searchStore filter args, checkout URL format | 6 |
 | achievements GraphQL on store.epicgames.com with bearer | 7 |

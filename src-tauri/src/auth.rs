@@ -84,6 +84,15 @@ impl AuthState {
     }
 }
 
+impl AuthState {
+    pub fn status_snapshot(&self) -> AuthStatus {
+        self.status
+            .lock()
+            .map(|s| s.clone())
+            .unwrap_or(AuthStatus::SignedOut { reason: None })
+    }
+}
+
 fn set_status(app: &AppHandle, status: AuthStatus) {
     if let Some(auth) = app.try_state::<AuthState>() {
         if let Ok(mut s) = auth.status.lock() {
@@ -300,6 +309,11 @@ async fn after_sign_in(app: AppHandle, acct: AccountSummary, epoch: u64) {
             }
         }
         Err(e) => tracing::warn!(error = %e, "could not load account details"),
+    }
+
+    // Library sync uses the account's country for catalog data, so it starts now.
+    if auth.epoch.load(Ordering::SeqCst) == epoch {
+        crate::library::sync_soon(&app);
     }
 
     // Phase 2 verification: which Phase 7 features the launcher token may use.

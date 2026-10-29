@@ -1,11 +1,41 @@
 import { boot, num } from '../boot';
-import { commands, type GameRow_Serialize, type DownloadRow, type AccountRow_Serialize } from '../bindings';
+import {
+  commands,
+  events,
+  type GameRow_Serialize,
+  type DownloadRow,
+  type AccountRow_Serialize,
+  type SyncStatus,
+  type LibrarySnapshot_Serialize,
+} from '../bindings';
 
 export type Game = GameRow_Serialize;
 export type Filter = 'all' | 'installed' | 'updates';
 export type Sort = 'title' | 'recent' | 'playtime' | 'size';
 
 const isInstalled = (g: Game) => g.state === 'installed' || g.state === 'updateAvailable';
+
+/** Same data? Then keep the old object so its tile doesn't re-render. */
+function sameGame(a: Game, b: Game): boolean {
+  return (
+    a.title === b.title &&
+    a.developer === b.developer &&
+    a.state === b.state &&
+    a.installSize === b.installSize &&
+    a.lastPlayed === b.lastPlayed &&
+    a.playtimeSecs === b.playtimeSecs &&
+    a.pinned === b.pinned &&
+    a.hasCover === b.hasCover &&
+    a.hasWide === b.hasWide &&
+    a.artRev === b.artRev &&
+    a.installable === b.installable &&
+    a.thirdParty === b.thirdParty
+  );
+}
+
+function sameList(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((x, i) => x === b[i]);
+}
 
 class LibraryState {
   /** Immutable rows; updates replace the array so only changed tiles re-render. */
@@ -16,6 +46,7 @@ class LibraryState {
   account = $state.raw<AccountRow_Serialize | null>(boot.snapshot.account ?? null);
   filter = $state<Filter>('all');
   query = $state('');
+  sync = $state.raw<SyncStatus>({ syncing: false, error: null, lastSync: null });
 
   byId = $derived(new Map(this.games.map((g) => [g.appName, g])));
 
@@ -48,6 +79,50 @@ class LibraryState {
           ? (g) => num(g.playtimeSecs)
           : (g) => num(g.installSize);
     return [...rows].sort((a, b) => key(b) - key(a));
+  }
+
+  /** Apply a fresh snapshot, reusing unchanged row objects (only changed tiles re-render). */
+  merge(snap: LibrarySnapshot_Serialize) {
+    const old = this.byId;
+    let changed = snap.games.length !== this.games.length;
+    const next = snap.games.map((g, i) => {
+      const prev = old.get(g.appName);
+      if (prev && sameGame(prev, g)) {
+        if (this.games[i] !== prev) changed = true;
+        return prev;
+      }
+      changed = true;
+      return g;
+    });
+    if (changed) this.games = next;
+    if (!sameList(this.quickLaunch, snap.quickLaunch)) this.quickLaunch = snap.quickLaunch;
+    if (!sameList(this.recent, snap.recent)) this.recent = snap.recent;
+    const dl = snap.activeDownload ?? null;
+    if (JSON.stringify(dl) !== JSON.stringify(this.download)) this.download = dl;
+    const acct = snap.account ?? null;
+    if (JSON.stringify(acct) !== JSON.stringify(this.account)) this.account = acct;
+  }
+
+  async reload() {
+    const res = await commands.getSnapshot();
+    if (res.status === 'ok') this.merge(res.data);
+  }
+
+  /** Follow library changes from Rust (debounced: cover art arrives in bursts). */
+  async init() {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await events.libraryChanged.listen(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => void this.reload(), 150);
+    });
+    await events.syncStatusChanged.listen((e) => (this.sync = e.payload));
+    this.sync = await commands.syncStatus();
+  }
+
+  async refresh() {
+    const res = await commands.refreshLibrary();
+    if (res.status === 'error') return res.error.message;
+    return null;
   }
 
   async setPinned(appName: string, pinned: boolean) {

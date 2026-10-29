@@ -15,7 +15,8 @@ const args = process.argv.slice(2);
 const runs = Number(args.find((a) => /^\d+$/.test(a)) ?? 7);
 const exe = resolve(args.find((a) => a.endsWith('.exe')) ?? 'target/release/next-launcher.exe');
 const mockIdx = args.indexOf('--mock-games');
-const mock = mockIdx >= 0 ? ['--mock-games', args[mockIdx + 1]] : [];
+// Fresh data dirs are empty: seed the Phase 1 mock library (48 games) unless told otherwise.
+const mock = ['--mock-games', mockIdx >= 0 ? args[mockIdx + 1] : '48'];
 
 // WebView2 helpers release the profile a moment after exit: retry, then give up quietly.
 function clean(dir) {

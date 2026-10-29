@@ -50,8 +50,14 @@ pub struct GameRow {
     pub has_cover: bool,
     /// A 16:9 image is cached on disk.
     pub has_wide: bool,
+    /// Changes when cached art changes; appended to image URLs to bust the WebView cache.
+    pub art_rev: u32,
     /// Stable 0–359 hue for the placeholder gradient.
     pub hue: u16,
+    /// Epic offers a Windows build we may install.
+    pub installable: bool,
+    /// Managed by another launcher (e.g. EA app, Ubisoft Connect).
+    pub third_party: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

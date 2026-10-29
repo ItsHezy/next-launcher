@@ -7,7 +7,10 @@
   let { game, kind = 'tall', label = true }: { game: Game; kind?: Kind; label?: boolean } = $props();
 
   const has = $derived(kind === 'wide' ? game.hasWide : game.hasCover);
-  const src = $derived(`${boot.imgBase}/${encodeURIComponent(game.appName)}/${kind === 'thumb' ? 'tall' : kind}`);
+  // `r` changes when the cached art changes (the protocol response is cached as immutable).
+  const src = $derived(
+    `${boot.imgBase}/${encodeURIComponent(game.appName)}/${kind === 'thumb' ? 'tall' : kind}?r=${game.artRev}`,
+  );
   const h = $derived(game.hue);
   const bg = $derived(
     `linear-gradient(${kind === 'wide' ? 120 : 160}deg, hsl(${h} 42% 38%), hsl(${(h + 48) % 360} 48% 17%))`,

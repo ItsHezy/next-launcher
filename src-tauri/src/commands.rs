@@ -28,6 +28,36 @@ pub struct UiError {
     pub message: String,
 }
 
+impl UiError {
+    pub fn internal(what: &str) -> Self {
+        tracing::error!(what, "internal error");
+        Self {
+            code: "internal".into(),
+            message: "Something went wrong inside Next Launcher. Details are in the log.".into(),
+        }
+    }
+}
+
+impl From<egs_api::ApiError> for UiError {
+    fn from(e: egs_api::ApiError) -> Self {
+        tracing::warn!(error = %e, "Epic API error");
+        let (code, message) = if e.is_transient() {
+            ("offline", "Couldn't reach Epic's servers. Retrying later.")
+        } else if e.is_auth_invalid() {
+            ("sessionExpired", "Your Epic session ended. Sign in again.")
+        } else {
+            (
+                "epic",
+                "Epic returned an unexpected answer. Details are in the log.",
+            )
+        };
+        Self {
+            code: code.into(),
+            message: message.into(),
+        }
+    }
+}
+
 impl From<egs_cache::Error> for UiError {
     fn from(e: egs_cache::Error) -> Self {
         tracing::error!(error = %e, "cache error");
@@ -62,6 +92,7 @@ pub fn app_ready(app: AppHandle, state: State<'_, AppState>, report: FrontendMar
     // Network work starts only after the window is visible (ADR 0006).
     if !state.no_network {
         crate::auth::start_restore(&app);
+        crate::library::kick_images(&app);
     }
     let marks = startup::snapshot();
     tracing::info!("{}", startup::render(&marks));

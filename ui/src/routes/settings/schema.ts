@@ -21,7 +21,8 @@ export type Row =
 export type Action =
   | { type: 'soon'; what: string; phase: number }
   | { type: 'web'; what: string; phase: number; page?: EpicPage }
-  | { type: 'goto'; section: SettingsSection };
+  | { type: 'goto'; section: SettingsSection }
+  | { type: 'import' };
 
 export interface Group {
   title?: string;
@@ -180,7 +181,7 @@ export const SECTIONS: Section[][] = [
           title: 'Location',
           rows: [
             { kind: 'folder', label: 'Default install folder', key: 'downloads.installDir' },
-            { kind: 'button', label: 'Import existing installation', desc: 'Use games already installed by the Epic Games Launcher', button: 'Import…', action: soon('Importing installs', 3) },
+            { kind: 'button', label: 'Import existing installation', desc: 'Use games already installed by the Epic Games Launcher', button: 'Import…', action: { type: 'import' } },
           ],
         },
         {

@@ -7,6 +7,7 @@
 mod migrations;
 mod mock;
 pub mod model;
+mod sync;
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -17,6 +18,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 
 pub use migrations::LATEST as SCHEMA_VERSION;
 pub use model::*;
+pub use sync::{Adopt, CatalogFields, GameUpsert, KnownGame, PendingImage, SyncDiff};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -41,15 +43,19 @@ fn now_secs() -> i64 {
         .unwrap_or(0)
 }
 
-/// Stable placeholder hue so a tile keeps its color across runs.
-fn hue_for(app_name: &str) -> u16 {
-    // FNV-1a 32-bit
+/// FNV-1a 32-bit.
+fn hue_hash(s: &str) -> u32 {
     let mut h: u32 = 0x811C_9DC5;
-    for b in app_name.bytes() {
+    for b in s.bytes() {
         h ^= u32::from(b);
         h = h.wrapping_mul(0x0100_0193);
     }
-    (h % 360) as u16
+    h
+}
+
+/// Stable placeholder hue so a tile keeps its color across runs.
+fn hue_for(app_name: &str) -> u16 {
+    (hue_hash(app_name) % 360) as u16
 }
 
 impl Cache {
@@ -100,25 +106,38 @@ impl Cache {
         let mut conn = self.lock()?;
         let tx = conn.transaction()?;
 
+        // The library belongs to the signed-in (or most recent) account.
+        tx.execute_batch(
+            "CREATE TEMP VIEW IF NOT EXISTS current_owner AS
+                 SELECT account_id FROM accounts ORDER BY signed_in DESC, updated_at DESC LIMIT 1",
+        )?;
+
         let mut games = Vec::new();
         {
             let mut stmt = tx.prepare_cached(
                 "SELECT g.app_name, g.title, g.developer, g.install_state, g.install_size,
                         g.last_played, g.playtime_secs, g.pinned,
-                        (SELECT 1 FROM game_images i WHERE i.app_name = g.app_name AND i.kind = 'tall' AND i.local_path IS NOT NULL),
-                        (SELECT 1 FROM game_images i WHERE i.app_name = g.app_name AND i.kind = 'wide' AND i.local_path IS NOT NULL)
+                        (SELECT local_path FROM game_images i WHERE i.app_name = g.app_name AND i.kind = 'tall' AND i.local_path IS NOT NULL),
+                        (SELECT local_path FROM game_images i WHERE i.app_name = g.app_name AND i.kind = 'wide' AND i.local_path IS NOT NULL),
+                        CASE WHEN g.namespace = 'mock' THEN 1 ELSE g.installable END,
+                        g.third_party
                  FROM games g
-                 WHERE g.is_dlc = 0 AND g.hidden = 0
+                 WHERE g.is_dlc = 0 AND g.hidden = 0 AND (g.owner IS NULL OR g.owner = (SELECT account_id FROM current_owner))
                  ORDER BY g.title COLLATE NOCASE",
             )?;
             let rows = stmt.query_map([], |r| {
                 let app_name: String = r.get(0)?;
-                let has_tall: Option<i64> = r.get(8)?;
-                let has_wide: Option<i64> = r.get(9)?;
+                let tall: Option<String> = r.get(8)?;
+                let wide: Option<String> = r.get(9)?;
                 Ok(GameRow {
                     hue: hue_for(&app_name),
-                    has_cover: has_tall.is_some(),
-                    has_wide: has_wide.is_some(),
+                    has_cover: tall.is_some(),
+                    has_wide: wide.is_some(),
+                    art_rev: hue_hash(&format!(
+                        "{}|{}",
+                        tall.as_deref().unwrap_or(""),
+                        wide.as_deref().unwrap_or("")
+                    )) % 1_000_000,
                     title: r.get(1)?,
                     developer: r.get(2)?,
                     state: InstallState::from_db(&r.get::<_, String>(3)?),
@@ -126,6 +145,8 @@ impl Cache {
                     last_played: r.get::<_, Option<i64>>(5)?.map(|v| v as f64),
                     playtime_secs: r.get::<_, i64>(6)? as f64,
                     pinned: r.get(7)?,
+                    installable: r.get(10)?,
+                    third_party: r.get(11)?,
                     app_name,
                 })
             })?;
@@ -136,14 +157,17 @@ impl Cache {
 
         let quick_launch = tx
             .prepare_cached(
-                "SELECT app_name FROM games WHERE pinned = 1 ORDER BY pin_order, title",
+                "SELECT app_name FROM games WHERE pinned = 1
+                     AND (owner IS NULL OR owner = (SELECT account_id FROM current_owner))
+                 ORDER BY pin_order, title",
             )?
             .query_map([], |r| r.get(0))?
             .collect::<Result<Vec<String>, _>>()?;
 
         let recent = tx
             .prepare_cached(
-                "SELECT app_name FROM games WHERE last_played IS NOT NULL AND hidden = 0
+                "SELECT app_name FROM games WHERE last_played IS NOT NULL AND hidden = 0 AND is_dlc = 0
+                     AND (owner IS NULL OR owner = (SELECT account_id FROM current_owner))
                  ORDER BY last_played DESC LIMIT 6",
             )?
             .query_map([], |r| r.get(0))?

@@ -25,11 +25,19 @@ export const commands = {
 	openEpicPage: (page: EpicPage) => typedError<null, UiError>(__TAURI_INVOKE("open_epic_page", { page })),
 	/**  Open the page Epic asked for in a corrective action (e.g. accept a new policy). */
 	openCorrectiveAction: () => typedError<null, UiError>(__TAURI_INVOKE("open_corrective_action")),
+	refreshLibrary: () => typedError<null, UiError>(__TAURI_INVOKE("refresh_library")),
+	syncStatus: () => __TAURI_INVOKE<SyncStatus_Serialize>("sync_status"),
+	/**  List installs the official launcher knows about. Read-only. */
+	eglImportScan: () => typedError<ImportCandidate[], UiError>(__TAURI_INVOKE("egl_import_scan")),
+	/**  Use an existing install. The user confirmed in the dialog that names the folder. */
+	eglAdopt: (appName: string) => typedError<null, UiError>(__TAURI_INVOKE("egl_adopt", { appName })),
 };
 
 /** Events */
 export const events = {
 	authChanged: makeEvent<AuthChanged_Serialize, AuthChanged_Deserialize>("auth-changed"),
+	libraryChanged: makeEvent<LibraryChanged, LibraryChanged>("library-changed"),
+	syncStatusChanged: makeEvent<SyncStatusChanged_Serialize, SyncStatusChanged_Deserialize>("sync-status-changed"),
 };
 
 /* Types */
@@ -133,8 +141,14 @@ export type GameRow_Deserialize = {
 	hasCover: boolean,
 	/**  A 16:9 image is cached on disk. */
 	hasWide: boolean,
+	/**  Changes when cached art changes; appended to image URLs to bust the WebView cache. */
+	artRev: number,
 	/**  Stable 0–359 hue for the placeholder gradient. */
 	hue: number,
+	/**  Epic offers a Windows build we may install. */
+	installable: boolean,
+	/**  Managed by another launcher (e.g. EA app, Ubisoft Connect). */
+	thirdParty?: string | null,
 };
 
 /**  One library tile. Kept small: 500+ of these go into the boot payload. */
@@ -152,11 +166,38 @@ export type GameRow_Serialize = {
 	hasCover: boolean,
 	/**  A 16:9 image is cached on disk. */
 	hasWide: boolean,
+	/**  Changes when cached art changes; appended to image URLs to bust the WebView cache. */
+	artRev: number,
 	/**  Stable 0–359 hue for the placeholder gradient. */
 	hue: number,
+	/**  Epic offers a Windows build we may install. */
+	installable: boolean,
+	/**  Managed by another launcher (e.g. EA app, Ubisoft Connect). */
+	thirdParty: string | null,
+};
+
+export type ImportCandidate = {
+	appName: string,
+	title: string,
+	folder: string,
+	size: number | null,
+	version: string,
+	/**  Interrupted update or EGL asked for validation: verify before first launch. */
+	needsVerify: boolean,
+	/**  The game is in this account's library. */
+	owned: boolean,
+	/**  We already manage it (installed here or adopted before). */
+	alreadyAdded: boolean,
+	/**  Complete, folder and manifest present, not a content pack. */
+	adoptable: boolean,
 };
 
 export type InstallState = "notInstalled" | "installed" | "updateAvailable" | "installing";
+
+/**  Something in the library changed; the UI re-reads the snapshot and merges it. */
+export type LibraryChanged = {
+	reason: string,
+};
 
 /**  Everything the first paint needs, read in one transaction. */
 export type LibrarySnapshot = LibrarySnapshot_Serialize | LibrarySnapshot_Deserialize;
@@ -193,6 +234,30 @@ export type Mark = {
 
 /**  A stored setting. Settings are flat `section.key` → scalar. */
 export type SettingValue = boolean | number | null | string;
+
+export type SyncStatus = SyncStatus_Serialize | SyncStatus_Deserialize;
+
+export type SyncStatusChanged = SyncStatusChanged_Serialize | SyncStatusChanged_Deserialize;
+
+export type SyncStatusChanged_Deserialize = SyncStatus_Deserialize;
+
+export type SyncStatusChanged_Serialize = SyncStatus_Serialize;
+
+export type SyncStatus_Deserialize = {
+	syncing: boolean,
+	/**  Friendly message when the last sync failed. */
+	error?: string | null,
+	/**  Unix seconds of the last successful sync. */
+	lastSync?: number | null,
+};
+
+export type SyncStatus_Serialize = {
+	syncing: boolean,
+	/**  Friendly message when the last sync failed. */
+	error: string | null,
+	/**  Unix seconds of the last successful sync. */
+	lastSync: number | null,
+};
 
 /**  Error shape the UI receives. `message` is written for people; details go to the log. */
 export type UiError = {

@@ -5,7 +5,7 @@
   import { auth } from '../../lib/state/auth.svelte';
   import { ACCENTS, settings } from '../../lib/state/settings.svelte';
   import { router } from '../../lib/state/router.svelte';
-  import { comingSoon } from '../../lib/state/ui.svelte';
+  import { comingSoon, ui } from '../../lib/state/ui.svelte';
   import { wallet } from '../../lib/mock';
   import type { Action, Row } from './schema';
 
@@ -22,7 +22,8 @@
   const fill = (s: string) => s.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? '');
 
   function run(a: Action) {
-    if (a.type === 'goto') router.go('settings', a.section);
+    if (a.type === 'import') ui.dialog = 'import';
+    else if (a.type === 'goto') router.go('settings', a.section);
     else if (a.type === 'web' && a.page) void auth.openEpicPage(a.page);
     else if (a.type === 'web') comingSoon(`${a.what} (opens Epic's page, signed in)`, a.phase);
     else comingSoon(a.what, a.phase);

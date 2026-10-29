@@ -92,6 +92,29 @@ const MIGRATIONS: &[&str] = &[
         payload TEXT NOT NULL                -- JSON, never secrets
     );
     "#,
+    // v2: real library sync (Phase 3).
+    r#"
+    ALTER TABLE games ADD COLUMN owner          TEXT;             -- account id the row belongs to
+    ALTER TABLE games ADD COLUMN installable    INTEGER NOT NULL DEFAULT 0; -- Epic offers a Windows build
+    ALTER TABLE games ADD COLUMN record_type    TEXT;
+    ALTER TABLE games ADD COLUMN artifact_id    TEXT;             -- releaseInfo appId (playtime)
+    ALTER TABLE games ADD COLUMN third_party    TEXT;             -- e.g. "Origin", "UbisoftConnect"
+    ALTER TABLE games ADD COLUMN main_game      TEXT;             -- catalog id of the base game (DLC)
+    ALTER TABLE games ADD COLUMN meta_json      TEXT;             -- raw catalog item
+    ALTER TABLE games ADD COLUMN catalog_at     INTEGER;          -- when meta_json was fetched
+    ALTER TABLE games ADD COLUMN egl_managed    INTEGER NOT NULL DEFAULT 0; -- adopted from EGL
+    ALTER TABLE games ADD COLUMN egl_guid       TEXT;
+    ALTER TABLE games ADD COLUMN needs_verify   INTEGER NOT NULL DEFAULT 0; -- verify before first use
+    CREATE INDEX games_owner ON games(owner);
+    CREATE INDEX games_artifact ON games(artifact_id) WHERE artifact_id IS NOT NULL;
+
+    CREATE TABLE sync_state (
+        account_id     TEXT PRIMARY KEY,
+        library_token  TEXT,
+        last_sync_at   INTEGER,
+        last_full_at   INTEGER
+    );
+    "#,
 ];
 
 /// Latest schema version this build understands.

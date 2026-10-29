@@ -9,6 +9,8 @@ interface Toast {
 
 class UiState {
   popover = $state<Popover>(null);
+  /** Modal dialogs (lazy-loaded). */
+  dialog = $state<'import' | null>(null);
   toasts = $state<Toast[]>([]);
   private next = 1;
 

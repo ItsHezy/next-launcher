@@ -5,13 +5,37 @@
 - [x] **Phase 0: Research** (2026-10-28). Specs in `docs/protocol/`, ledger in `research/notes.md`.
 - [x] **Phase 1: Skeleton and speed** (2026-10-28). Full UI on mock data, measured in `docs/perf.md`.
 - [x] **Phase 2: Auth** (2026-10-28). Live sign-in, silent restore and signed-in Epic pages verified on the owner's account.
-- [ ] Phase 3: Library
+- [x] **Phase 3: Library** (2026-10-29). Real library synced live (35 games + 3 DLC, real covers); EGL import built, live adoption awaits the owner.
 - [ ] Phase 4: Downloads and installs
 - [ ] Phase 5: Launch
 - [ ] Phase 6: Store
 - [ ] Phase 7: Settings, wallet, profile menu
 - [ ] Phase 8: Cloud saves
 - [ ] Phase 9: Polish and ship
+
+## Phase 3 summary
+
+What works (verified live on the owner's account):
+- Sync of owned items, Windows builds, catalog metadata and playtime into SQLite, after sign-in and
+  every 15 min while open, plus a refresh button. First sync 2.1 s; unchanged library 0.74 s via
+  Epic's state token (no catalog or image traffic). Mock games removed on first real sync.
+- Cover art resized by Epic's CDN, downloaded once (8 in flight, atomic writes), served from disk;
+  tiles update in place. 76/76 covers for the owner's library.
+- UI merges snapshots by identity, so only changed tiles re-render. "Not on Windows" and
+  "Opens in <launcher>" states for owned items we can't install.
+- DLC stays attached to its game (3 hidden from the grid). Library is per account.
+- Import from the official launcher: read-only scan, adoption only on an explicit two-step
+  confirmation naming the folder; copies the build manifest into our data folder, writes nothing on
+  the game drive or in EGL's data.
+- 46 Rust tests (14 api, 10 auth, 11 cache, 3 import, 8 app).
+
+Measured: warm 372 ms on the real profile (409 ms synthetic, at the 400 ms line), cold 431 ms,
+idle 108.9 MB / 0.01 % CPU with 35 covers.
+
+Known gaps:
+- Live adoption of the owner's Fortnite install not yet tried (needs the owner's go-ahead).
+- "Recently played" stays empty until launches are tracked (Phase 5): Epic only reports totals.
+- Hidden-games management and "Import favorites from Epic" are not built yet.
 
 ## Phase 2 summary
 
@@ -71,8 +95,8 @@ Known gaps:
 
 1. **License** (ADR 0001): GPL-3.0-or-later recommended, or MIT.
 2. **Image format** (ADR 0004): store CDN-resized JPEG/WebP as-is instead of transcoding to WebP.
-3. **Warm start**: accept ~460 ms for a fresh process plus near-instant reopen from tray (Phase 9), or
-   spend time on WebView2 flags (risk to scroll smoothness).
+3. **Warm start**: now ~370–410 ms (at the 400 ms line). Options unchanged: accept plus tray reopen
+   (Phase 9), or try WebView2 flags (risk to scroll smoothness).
 4. **Test game** for Phase 4: a small free game on the owner's account (Fortnite is unsuitable).
 5. **Mockup access**: sign in to claude.ai in the app's browser pane, or share screenshots.
 

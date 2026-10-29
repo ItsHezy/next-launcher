@@ -6,6 +6,8 @@
 pub mod account;
 pub mod error;
 pub mod http;
+pub mod images;
+pub mod library;
 pub mod oauth;
 mod secret;
 

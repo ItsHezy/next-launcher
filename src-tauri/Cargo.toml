@@ -15,7 +15,8 @@ tauri-build = { version = "2.7", features = [] }
 egs-cache = { path = "../crates/egs-cache", features = ["specta"] }
 egs-api = { path = "../crates/egs-api" }
 egs-auth = { path = "../crates/egs-auth" }
-tokio = { version = "1", features = ["time", "sync"] }
+egs-import = { path = "../crates/egs-import" }
+tokio = { version = "1", features = ["rt", "time", "sync"] }
 tauri = { version = "2.12", features = [] }
 tauri-plugin-single-instance = "2.5"
 tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }

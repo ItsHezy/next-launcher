@@ -6,7 +6,9 @@ param(
   [string]$Route = "",
   [string]$Exe = "target\release\next-launcher.exe",
   [string]$DataDir = ".dev-data\release",
-  [int]$Wait = 3
+  [int]$Wait = 3,
+  # Capture the already-running app instead of launching (and closing) a new one.
+  [switch]$Attach
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,11 +26,16 @@ public static class NlWin {
 "@
 [NlWin]::SetProcessDPIAware() | Out-Null
 
-$argsList = @("--data-dir", $DataDir)
-if ($Route) { $argsList += @("--dev-route", $Route) }
-$p = Start-Process -FilePath $Exe -ArgumentList $argsList -PassThru
-Start-Sleep -Seconds $Wait
-$p.Refresh()
+if ($Attach) {
+  $p = Get-Process next-launcher -ErrorAction Stop | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero } | Select-Object -First 1
+  if (-not $p) { throw "Next Launcher isn't running" }
+} else {
+  $argsList = @("--data-dir", $DataDir)
+  if ($Route) { $argsList += @("--dev-route", $Route) }
+  $p = Start-Process -FilePath $Exe -ArgumentList $argsList -PassThru
+  Start-Sleep -Seconds $Wait
+  $p.Refresh()
+}
 $h = $p.MainWindowHandle
 if ($h -eq [IntPtr]::Zero) { throw "no main window" }
 [NlWin]::SetForegroundWindow($h) | Out-Null
@@ -43,5 +50,5 @@ $g = [System.Drawing.Graphics]::FromImage($bmp)
 $g.CopyFromScreen($r.L, $r.T, 0, 0, $bmp.Size)
 $bmp.Save((Resolve-Path -LiteralPath (Split-Path -Parent (Join-Path (Get-Location) $Out))).Path + "\" + (Split-Path -Leaf $Out), [System.Drawing.Imaging.ImageFormat]::Png)
 $g.Dispose(); $bmp.Dispose()
-Stop-Process -Id $p.Id -ErrorAction SilentlyContinue
+if (-not $Attach) { Stop-Process -Id $p.Id -ErrorAction SilentlyContinue }
 Write-Host "saved $Out (${w}x${hh})"

@@ -8,6 +8,24 @@ AMD Ryzen 5 5600X (6C/12T), 32 GB RAM, NVMe SSD, RTX 3060 Ti, 200 Hz display, Wi
 10.0.26200, WebView2 runtime 156.0.4314.50. That's upper mid-range; numbers on a true mid-range PC
 will be somewhat higher.
 
+## Phase 3 (2026-10-29): library sync
+
+| Metric | Budget | Measured |
+|---|---|---|
+| Warm start, owner's real profile (35 games, real covers), 6 runs | ≤ 400 ms | **364–392 ms** (median ~372) ✅ |
+| Warm start, standard bench (48 mock games), median of 7 | ≤ 400 ms | **409 ms** (min 390) ≈ at the line |
+| Cold start, standard bench, median of 7 | ≤ 1.0 s | **431 ms** ✅ |
+| Idle RAM, signed in, 35 covers, after a sync | ≤ 150 MB | **108.9 MB** ✅ |
+| Idle CPU | ~0 % | **0.01 %** ✅ |
+| First full sync (62 records, 38 catalog items) | | 2.06 s, in background |
+| Re-sync with valid state token | | 0.74 s, no catalog or image traffic |
+| Cover art (76 images, resized by CDN, 8 in flight) | | ~13.6 s, in background, 0 failures |
+| Initial / total JS (gz) | 80 / 250 KB | 33.8 / 46.5 KB ✅ |
+
+Today's runs are faster across the board than Phase 2's (WebView2 creation 326 vs 359 ms
+median), so day-to-day variance is about ±40 ms. Warm start now sits right at the target:
+met on the real profile, 9 ms over on the synthetic bench.
+
 ## Phase 2 (2026-10-28): auth
 
 Network starts only after the window is shown, so startup is unchanged within run-to-run noise.
