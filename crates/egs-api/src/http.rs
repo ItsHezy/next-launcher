@@ -27,6 +27,8 @@ pub struct Hosts {
     pub platform: String,
     /// Code redemption.
     pub fulfillment: String,
+    /// Cloud saves storage.
+    pub datastorage: String,
 }
 
 impl Hosts {
@@ -43,6 +45,8 @@ impl Hosts {
             store_static: "https://store-site-backend-static-ipv4.ak.epicgames.com".into(),
             platform: "https://egs-platform-service.store.epicgames.com".into(),
             fulfillment: "https://fulfillment-public-service-prod.ol.epicgames.com".into(),
+            datastorage: "https://datastorage-public-service-liveegs.live.use1a.on.epicgames.com"
+                .into(),
         }
     }
 
@@ -60,7 +64,8 @@ impl Hosts {
             store: b.clone(),
             store_static: b.clone(),
             platform: b.clone(),
-            fulfillment: b,
+            fulfillment: b.clone(),
+            datastorage: b,
         }
     }
 }

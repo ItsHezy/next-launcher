@@ -107,6 +107,15 @@ How each fact was obtained. Raw downloads and probe output live in `research/ref
 | L34 | `store.epicgames.com/achievements` is 404; `publisher-index`, `gifts` exist; legal pages live on `legal.epicgames.com` | screenshots, titles |
 | L35 | With a DevTools port open, the store answers navigations with "Just a moment…"; the accounts site doesn't | CDP test runs (not used in normal operation) |
 
+## Phase 8 live verification (2026-10-29, owner's account, test game only)
+
+| # | Finding | Evidence |
+|---|---|---|
+| L36 | Save-sync listing, read links, write links (POST paths), signed GET/PUT all work with the launcher token | app log, round trip |
+| L37 | A 2024 EGL-written save (4 files) downloads and passes our SHA-1 checks; listing keys carry a prefix before `<accountId>/<appName>/` | download log, files on disk |
+| L38 | Our uploaded manifest (FL 18, 1 chunk) is accepted and reads back byte-identically | round trip |
+| L39 | 12 of 38 owned installable games declare `CloudSaveFolder` | catalog attributes |
+
 ## Open questions (carried into phases)
 
 | Question | Phase |

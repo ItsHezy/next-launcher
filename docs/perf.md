@@ -8,6 +8,17 @@ AMD Ryzen 5 5600X (6C/12T), 32 GB RAM, NVMe SSD, RTX 3060 Ti, 200 Hz display, Wi
 10.0.26200, WebView2 runtime 156.0.4314.50. That's upper mid-range; numbers on a true mid-range PC
 will be somewhat higher.
 
+## Phase 8 (2026-10-29): cloud saves
+
+| Metric | Budget | Measured |
+|---|---|---|
+| Warm start, standard bench, median of 7 | ≤ 400 ms | **418 ms** (min 390): run-to-run spread since Phase 5 is ±30 ms |
+| Cold start, median of 7 | ≤ 1.0 s | **429 ms** ✅ |
+| Idle RAM / CPU, signed in | ≤ 150 MB / ~0 % | **105.4 MB / 0.03 %** ✅ |
+| Installer (NSIS) | ≤ 15 MB | **3.32 MiB** ✅ (exe 8.70 MiB) |
+| Initial / total JS (gz) | 80 / 250 KB | 38.4 / 65.5 KB ✅ |
+| Upload after exit (4 files, 1 chunk) | | 1.6 s after the game closed |
+
 ## Phase 7 (2026-10-29): settings, wallet, profile menu
 
 | Metric | Budget | Measured |

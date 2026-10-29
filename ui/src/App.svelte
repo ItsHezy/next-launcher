@@ -97,6 +97,16 @@
     {#await import('./lib/components/AccountDialog.svelte') then { default: AccountDialog }}
       <AccountDialog what={ui.dialog.what} />
     {/await}
+  {:else if ui.dialog?.kind === 'saves'}
+    {#await import('./lib/components/SaveConflictDialog.svelte') then { default: SaveConflictDialog }}
+      <SaveConflictDialog
+        appName={ui.dialog.appName}
+        title={ui.dialog.title}
+        localTime={ui.dialog.localTime}
+        cloudTime={ui.dialog.cloudTime}
+        launch={ui.dialog.launch}
+      />
+    {/await}
   {:else if ui.dialog?.kind === 'move'}
     {#await import('./lib/components/MoveDialog.svelte') then { default: MoveDialog }}
       <MoveDialog appName={ui.dialog.appName} />

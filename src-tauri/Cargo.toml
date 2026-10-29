@@ -19,6 +19,7 @@ egs-import = { path = "../crates/egs-import" }
 egs-manifest = { path = "../crates/egs-manifest" }
 egs-download = { path = "../crates/egs-download" }
 egs-launch = { path = "../crates/egs-launch" }
+getrandom = "0.3"
 tokio = { version = "1", features = ["rt", "time", "sync"] }
 tauri = { version = "2.12", features = [] }
 tauri-plugin-single-instance = "2.5"
@@ -44,6 +45,9 @@ windows-sys = { version = "0.61", features = [
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_System_SystemInformation",
 ] }
+
+[dev-dependencies]
+tempfile = "3"
 
 [lints]
 workspace = true

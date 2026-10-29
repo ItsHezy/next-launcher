@@ -61,6 +61,8 @@ pub struct LaunchOptions {
     pub offline: bool,
     /// Answer to the prerequisites question: `run` or `skip`.
     pub prereq: Option<String>,
+    /// Answer to a cloud-save conflict: `download`, `upload` or `skip`.
+    pub saves: Option<String>,
 }
 
 fn err(code: &str, message: impl Into<String>) -> UiError {
@@ -253,6 +255,9 @@ pub(crate) async fn launch(
             format!("{} needs to be online to start. Try anyway?", game.title),
         ));
     }
+
+    // Cloud saves first ("Sync when a game starts"); a conflict comes back as a question.
+    crate::saves::before_launch(app, app_name, options.saves.as_deref()).await?;
 
     // Exchange code immediately before the start (single use, 5 minutes, never logged).
     let mut code = None;
@@ -573,6 +578,7 @@ async fn finished(app: &AppHandle, app_name: &str) {
         return;
     };
     end_session(app, app_name, &run, now_ms()).await;
+    crate::saves::after_exit(app, app_name).await;
     let _ = GameRunning {
         app_name: app_name.to_owned(),
         running: false,

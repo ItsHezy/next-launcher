@@ -8,6 +8,7 @@ pub mod chunk;
 mod crypto;
 mod json;
 mod model;
+pub mod savegame;
 pub mod writer;
 
 use std::collections::HashMap;

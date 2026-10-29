@@ -1,8 +1,10 @@
 # Cloud saves
 
-Crate: `egs-api::saves` (HTTP) + `egs-manifest` (save manifest/chunk build and parse).
-Host `DS` = `datastorage-public-service-liveegs.live.use1a.on.epicgames.com`. All [REF] (Legendary + Heroic fork)
-unless marked.
+Crate: `egs-api::saves` (HTTP) + `egs-manifest::savegame` (save manifest/chunk build and parse);
+sync logic in `src-tauri/src/saves.rs` (ADR 0012).
+Host `DS` = `datastorage-public-service-liveegs.live.use1a.on.epicgames.com`. [REF] (Legendary + Heroic
+fork); the Phase 8 live check below confirms listing, read links, write links, upload and
+download **[OBS]**.
 
 ## Which games, which folder
 
@@ -61,22 +63,33 @@ A normal binary manifest (manifests.md), built like this:
 
 1. List manifests and take the newest (by name/timestamp).
 2. GET it via `readLink`, then parse.
-3. POST its chunk paths to get read links (batch ≤ 100 **[GUESS]**). GET them with ≤ 8 concurrent requests.
-4. Write each file to a temp name in the save folder, then rename. A backup of the overwritten local
-   files is kept in `%LOCALAPPDATA%\NextLauncher\save-backups\<appName>\<timestamp>\` (last 3 kept).
+3. The game listing already carries a read link for every chunk **[OBS]**, so no extra request is
+   needed; chunks are fetched one after another (saves are small).
+4. Write each file to a temp name in the save folder, then rename, and set its modified time to the
+   manifest's time (so the next check sees "in sync"). Before writing, the local files about to be
+   replaced are copied to `%LOCALAPPDATA%\NextLauncher\save-backups\<appName>\<timestamp>\` (last 3 kept).
+   Only files that pass `CloudIncludeList`/`CloudExcludeList` are written; other files in the folder are
+   never touched or deleted. Each file's SHA-1 is checked before anything is written.
 
-## Sync decision (Phase 8)
+## Sync decision (as built)
 
-Inputs: newest local file mtime (UTC), newest remote manifest time, our stored last-sync time.
+Inputs: newest local save file mtime, the newest cloud manifest (name and time), and our record of
+the last agreement (`internal.saves.<app>` = manifest name + local mtime at that moment).
 
 | Situation | Result |
 |---|---|
+| no saves anywhere | nothing |
 | no remote | upload |
 | no local | download |
-| only remote changed since last sync (> 60 s) | download |
-| only local changed since last sync | upload |
-| both changed since last sync | **conflict** → setting: ask (default) / prefer local / prefer cloud |
-| neither | nothing |
+| record: local newer than recorded (> 2 s), same newest manifest | upload |
+| record: a different newest manifest, local unchanged | download |
+| record: both changed | **conflict** → setting: ask (default) / prefer this PC / prefer cloud |
+| record: neither changed | in sync |
+| no record yet (first sync on this PC): local and cloud within 60 s | in sync (record it) |
+| no record yet, times differ | **conflict** (never guess on the first sync) |
+
+Using a record instead of comparing clocks alone (Legendary's approach) means a save edited on
+another PC after our last sync is noticed even when this PC's clock is ahead.
 
 Sync runs before launch ("sync on start") and after exit ("sync on exit"). It's per game and
 switchable in Settings → Cloud saves / Manage games.
@@ -85,3 +98,21 @@ switchable in Settings → Cloud saves / Manage games.
 
 Orphaned chunks (not referenced by any manifest) may be deleted only by an explicit
 "Clean up cloud saves" action with a confirmation. Never automatically.
+
+## Phase 8 live check (2026-10-29, owner's account, *while True: learn()* only)
+
+- `CloudSaveFolder` = `{InstallDir}/Saves/` (so every local read and write stayed inside
+  `test-installs/`); no include/exclude lists. 12 of the owner's installable games declare cloud saves.
+- The account already had a cloud save for this game from 2024-10-24 (written by EGL). First sync
+  on this PC: local file from today's test launches vs that save → **conflict**, nothing changed.
+- Download of the EGL-written save: 4 files (≈ 490 KB), SHA-1 verified, mtimes set to the save time,
+  the replaced local file backed up first. → EGL save manifests and chunks read correctly.
+- Upload of the same content: 4 files in 1 chunk accepted by Epic's storage; after moving the local
+  files aside, auto-sync downloaded our upload and the files were byte-identical.
+- Simulated conflict (local touched + an older recorded manifest): detected, files untouched with
+  "ask"; resolving with "use cloud" restored them and kept a second backup.
+- Launch hooks: before start "in sync" (nothing transferred); after exit the game's updated saves
+  were uploaded 2 s after it closed.
+- Not verified: the official launcher reading a save that Next Launcher uploaded (same format as
+  Legendary's, which EGL reads); games with `{AppData}`/`{UserDir}` folders (dev builds refuse save
+  folders outside the development root).

@@ -226,3 +226,10 @@ impl Manifest {
         URL_SAFE_NO_PAD.encode(h.finalize())
     }
 }
+
+/// Chunk group when a manifest doesn't store one: `crc32(guid as 16 LE bytes) % 100`.
+pub fn crc_group(g: &Guid) -> u8 {
+    let mut crc = flate2::Crc::new();
+    crc.update(&guid_le_bytes(g));
+    (crc.sum() % 100) as u8
+}

@@ -11,6 +11,7 @@ pub mod images;
 pub mod launch;
 pub mod library;
 pub mod oauth;
+pub mod saves;
 mod secret;
 pub mod store;
 pub mod wallet;

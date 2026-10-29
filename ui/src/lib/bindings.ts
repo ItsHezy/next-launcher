@@ -79,6 +79,14 @@ export const commands = {
 	setHidden: (appName: string, hidden: boolean) => typedError<null, UiError>(__TAURI_INVOKE("set_hidden", { appName, hidden })),
 	/**  Let the user pick a folder (Windows' own folder dialog). `None` if cancelled. */
 	pickFolder: (title: string) => typedError<string | null, UiError>(__TAURI_INVOKE("pick_folder", { title })),
+	cloudSaveStatus: (appName: string) => typedError<SaveStatus_Serialize, UiError>(__TAURI_INVOKE("cloud_save_status", { appName })),
+	/**  Installed games whose catalog entry supports cloud saves (no network). */
+	cloudSaveGames: () => typedError<SaveStatus_Serialize[], UiError>(__TAURI_INVOKE("cloud_save_games")),
+	/**
+	 *  Sync one game. Returns the status afterwards; `Conflict` is returned (not resolved) when
+	 *  the setting says "ask" and the action is `Auto`.
+	 */
+	cloudSaveSync: (appName: string, action: SyncAction) => typedError<SaveStatus_Serialize, UiError>(__TAURI_INVOKE("cloud_save_sync", { appName, action })),
 };
 
 /** Events */
@@ -89,6 +97,7 @@ export const events = {
 	gameRunning: makeEvent<GameRunning, GameRunning>("game-running"),
 	libraryChanged: makeEvent<LibraryChanged, LibraryChanged>("library-changed"),
 	moveProgress: makeEvent<MoveProgress, MoveProgress>("move-progress"),
+	saveSync: makeEvent<SaveSync, SaveSync>("save-sync"),
 	syncStatusChanged: makeEvent<SyncStatusChanged_Serialize, SyncStatusChanged_Deserialize>("sync-status-changed"),
 };
 
@@ -238,6 +247,10 @@ export type Connection_Serialize = {
 	kind: string,
 	name: string | null,
 };
+
+export type Decision = 
+/**  No saves anywhere yet. */
+"nothing" | "inSync" | "upload" | "download" | "conflict";
 
 /**  Live progress of the running download (throttled to ~4/s). */
 export type DownloadProgress = {
@@ -394,6 +407,8 @@ export type LaunchOptions_Deserialize = {
 	offline: boolean,
 	/**  Answer to the prerequisites question: `run` or `skip`. */
 	prereq?: string | null,
+	/**  Answer to a cloud-save conflict: `download`, `upload` or `skip`. */
+	saves?: string | null,
 };
 
 export type LaunchOptions_Serialize = {
@@ -401,6 +416,8 @@ export type LaunchOptions_Serialize = {
 	offline: boolean,
 	/**  Answer to the prerequisites question: `run` or `skip`. */
 	prereq: string | null,
+	/**  Answer to a cloud-save conflict: `download`, `upload` or `skip`. */
+	saves: string | null,
 };
 
 /**  Something in the library changed; the UI re-reads the snapshot and merges it. */
@@ -471,6 +488,48 @@ export type MoveResult = {
 export type RedeemResult = {
 	/**  What the code added, e.g. game names. */
 	items: string[],
+};
+
+export type SaveStatus = SaveStatus_Serialize | SaveStatus_Deserialize;
+
+export type SaveStatus_Deserialize = {
+	appName: string,
+	title: string,
+	supported: boolean,
+	/**  Cloud saves are on for this game (global switch and per-game switch). */
+	enabled: boolean,
+	localPath?: string | null,
+	localFiles: number | null,
+	/**  Newest local save file, Unix seconds. */
+	localTime?: number | null,
+	/**  Newest cloud save, Unix seconds. */
+	cloudTime?: number | null,
+	lastSync?: number | null,
+	decision: Decision,
+};
+
+export type SaveStatus_Serialize = {
+	appName: string,
+	title: string,
+	supported: boolean,
+	/**  Cloud saves are on for this game (global switch and per-game switch). */
+	enabled: boolean,
+	localPath: string | null,
+	localFiles: number | null,
+	/**  Newest local save file, Unix seconds. */
+	localTime: number | null,
+	/**  Newest cloud save, Unix seconds. */
+	cloudTime: number | null,
+	lastSync: number | null,
+	decision: Decision,
+};
+
+/**  A sync started, finished or needs the user (events for the UI). */
+export type SaveSync = {
+	appName: string,
+	/**  `syncing` | `done` | `conflict` | `failed` */
+	state: string,
+	message: string,
 };
 
 /**  A stored setting. Settings are flat `section.key` → scalar. */
@@ -582,6 +641,14 @@ export type StoreProduct_Serialize = {
 export type StoreTarget = { kind: "home" } | { kind: "wishlist" } | { kind: "cart" } | { kind: "product"; slug: string } | 
 /**  Epic's checkout for one offer: the user reviews and pays there. */
 { kind: "checkout"; namespace: string; offerId: string } | { kind: "search"; query: string };
+
+export type SyncAction = 
+/**  Follow the decision table (conflicts follow the setting). */
+"auto" | 
+/**  Upload this PC's saves (the user chose it). */
+"upload" | 
+/**  Replace this PC's saves with the cloud's (backed up first). */
+"download";
 
 export type SyncStatus = SyncStatus_Serialize | SyncStatus_Deserialize;
 

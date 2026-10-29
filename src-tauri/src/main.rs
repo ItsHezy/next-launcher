@@ -13,6 +13,7 @@ mod logging;
 mod paths;
 mod protocol;
 mod redact;
+mod saves;
 mod startup;
 mod store;
 mod support;
@@ -136,6 +137,9 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             support::hidden_games,
             support::set_hidden,
             support::pick_folder,
+            saves::cloud_save_status,
+            saves::cloud_save_games,
+            saves::cloud_save_sync,
         ])
         .events(tauri_specta::collect_events![
             auth::AuthChanged,
@@ -144,7 +148,8 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             install::DownloadProgress,
             install::MoveProgress,
             launch::GameRunning,
-            account::AccountChanged
+            account::AccountChanged,
+            saves::SaveSync
         ])
 }
 
@@ -329,6 +334,7 @@ fn main() {
             app.manage(install::DownloadsState::new(dev_install_root.clone()));
             app.manage(launch::LaunchState::default());
             app.manage(account::AccountState::default());
+            app.manage(saves::SavesState::default());
             install::apply_speed_limit(app.handle());
 
             let main = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))

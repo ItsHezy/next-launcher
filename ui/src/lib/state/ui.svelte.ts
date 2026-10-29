@@ -10,6 +10,8 @@ export type Dialog =
   | { kind: 'move'; appName: string }
   /** Account edits, code redemption, hidden games (Settings, profile menu). */
   | { kind: 'account'; what: 'displayName' | 'language' | 'redeem' | 'hidden' }
+  /** Cloud saves changed in both places: which one to keep. */
+  | { kind: 'saves'; appName: string; title: string; localTime: string; cloudTime: string; launch: boolean }
   /** A launch needs an answer first (prerequisites, offline start). */
   | { kind: 'launch'; appName: string; code: string; message: string };
 

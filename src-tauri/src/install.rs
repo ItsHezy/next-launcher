@@ -79,7 +79,7 @@ impl DownloadsState {
         }
     }
 
-    fn guard(&self, path: &Path) -> Result<(), UiError> {
+    pub(crate) fn guard(&self, path: &Path) -> Result<(), UiError> {
         match &self.install_root {
             Some(root) if !path.starts_with(root) => Err(UiError {
                 code: "devGuard".into(),
@@ -1651,6 +1651,9 @@ pub async fn dev_action(app: AppHandle, spec: String) {
             .await
             .map(|_| "uninstalled".to_owned()),
         "store" => crate::store::dev_check(&app, app_name).await,
+        "saves" | "saves-up" | "saves-down" | "saves-sync" => {
+            crate::saves::dev_action(&app, action, app_name).await
+        }
         "account" => crate::account::dev_check(&app).await,
         "page" => match serde_json::from_str::<crate::auth::EpicPage>(&format!("\"{app_name}\"")) {
             Ok(page) => {

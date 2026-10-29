@@ -10,8 +10,35 @@
 - [x] **Phase 5: Launch** (2026-10-29). Test game started from the app, "Playing" shown, playtime recorded and reported to Epic.
 - [x] **Phase 6: Store** (2026-10-29). Live store: Featured, free games, on sale, new releases, search, product pages; wishlist, cart and checkout on Epic's own pages, signed in.
 - [x] **Phase 7: Settings, wallet, profile menu** (2026-10-29). Real account, connections and wallet data; in-app edits where Epic permits; every other row opens Epic's verified page, signed in.
-- [ ] Phase 8: Cloud saves
+- [x] **Phase 8: Cloud saves** (2026-10-29). Download, upload, conflict handling and launch/exit sync verified with one game; local saves always backed up before a download.
 - [ ] Phase 9: Polish and ship
+
+## Phase 8 summary
+
+What works (verified live with *while True: learn()*, whose saves live inside `test-installs/`):
+- Cloud saves for every installed game whose catalog entry declares them (12 of the owner's games).
+- Download restores a save written by the official launcher (4 files, SHA-1 checked); upload is
+  compatible with Epic's storage and reads back byte-identically.
+- Sync on start and on exit: before the game starts (nothing to do → no transfer), after it exits
+  (changed saves uploaded 1.6 s later). Network trouble never blocks playing.
+- Conflicts are never resolved silently with the default "Ask me": a dialog shows both times and offers
+  "Use cloud save", "Keep this PC's save", or play without syncing. The first sync on a PC asks unless
+  both sides match within a minute (it found the owner's 2024 cloud save and asked).
+- Every download backs up the files it replaces (last 3 kept) and only touches the game's save files.
+- Settings → Cloud saves lists the games with status ("In sync · synced 1 minute ago"), Sync now and a
+  per-game switch.
+- 117 Rust tests (30 api, 10 auth, 18 cache, 17 download, 3 import, 10 launch, 12 manifest, 17 app).
+
+Measured: warm 418 ms, cold 429 ms, idle 105.4 MB / 0.03 % CPU, installer 3.32 MiB.
+
+What changed on the owner's account: the test game's cloud saves gained three newer saves (the
+same content as the 2024 save, then that save plus 18 s of play). Older cloud saves are untouched.
+
+Known gaps:
+- Not verified that the official launcher reads a save uploaded here (same format as Legendary's).
+- Games whose saves live in AppData/Documents were not tested live (dev builds refuse folders outside
+  the development root on purpose).
+- No "clean up old cloud saves" action yet.
 
 ## Phase 7 summary
 

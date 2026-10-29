@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use crate::model::{ChunkInfo, ChunkPart, FileManifest, Guid, Manifest, Meta};
+use crate::model::{crc_group, ChunkInfo, ChunkPart, FileManifest, Guid, Manifest, Meta};
 use crate::Error;
 
 /// `"013000000000"` → 13.
@@ -67,12 +67,6 @@ fn blob(v: &Value, k: &str, default: u64) -> Result<u64, Error> {
         Some(x) => blob_to_u64(x),
         None => Ok(default),
     }
-}
-
-fn crc_group(g: &Guid) -> u8 {
-    let mut crc = flate2::Crc::new();
-    crc.update(&crate::model::guid_le_bytes(g));
-    (crc.sum() % 100) as u8
 }
 
 pub(crate) fn parse(bytes: &[u8]) -> Result<Manifest, Error> {

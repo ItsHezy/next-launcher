@@ -24,6 +24,12 @@ export async function play(g: Game, options: LaunchOptions_Deserialize = { offli
     if (!installed && g.thirdParty) ui.toast(`Opening ${g.title} in ${storeName(g.thirdParty)}.`);
     return;
   }
+  if (res.error.code === 'saveConflict') {
+    // "title|local ISO|cloud ISO" from the launch command.
+    const [title = g.title, localTime = '', cloudTime = ''] = res.error.message.split('|');
+    ui.dialog = { kind: 'saves', appName: g.appName, title, localTime, cloudTime, launch: true };
+    return;
+  }
   if (PROMPTS.has(res.error.code)) {
     ui.dialog = { kind: 'launch', appName: g.appName, code: res.error.code, message: res.error.message };
     return;
