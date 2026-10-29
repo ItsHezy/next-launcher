@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { EpicPage } from '../bindings';
-  import { wallet } from '../mock';
+  import { num } from '../boot';
+  import { account } from '../state/account.svelte';
   import { auth } from '../state/auth.svelte';
   import { router } from '../state/router.svelte';
   import { ui } from '../state/ui.svelte';
@@ -8,6 +9,13 @@
 
   let first: HTMLButtonElement;
   $effect(() => first?.focus());
+  // Fresh numbers when opened (Rust answers from its 5-minute cache).
+  $effect(() => {
+    void account.loadWallet();
+  });
+
+  const w = $derived(account.wallet);
+  const coupons = $derived(w?.coupons == null ? null : num(w.coupons));
 
   function web(page: EpicPage) {
     ui.close();
@@ -18,14 +26,21 @@
 <div class="menu wallet" role="dialog" aria-label="Wallet">
   <div class="balance">
     <span class="label">Wallet balance</span>
-    <span class="amount">{wallet.balance ?? '—'}</span>
-    {#if wallet.balance === null}<span class="note">Your balance shows here from Phase 7.</span>{/if}
+    <span class="amount">{w?.balance ?? '—'}</span>
+    {#if w && w.available && !w.balance}
+      <span class="note">Epic's wallet isn't offered in your region.</span>
+    {:else if w && !w.available}
+      <span class="note">Your balance is on Epic's wallet page.</span>
+    {/if}
   </div>
   <div class="row">
     <Icon name="sparkle" size={18} />
     <span>Epic Rewards</span>
-    <span class="val">{wallet.rewards ?? '—'}</span>
+    <span class="val">{w?.rewards ?? '—'}</span>
   </div>
+  {#if coupons !== null && coupons > 0}
+    <p class="note coupons">{coupons} coupon{coupons === 1 ? '' : 's'}, applied at checkout</p>
+  {/if}
   <div class="actions">
     <button class="btn btn-primary" bind:this={first} onclick={() => web('wallet')}>Add funds</button>
     <button class="btn btn-quiet" onclick={() => web('redeem')}>Redeem card</button>
@@ -68,6 +83,9 @@
   .note {
     color: var(--text-2);
     font-size: 12.5px;
+  }
+  .coupons {
+    margin: 10px 2px 0;
   }
   .amount {
     font-size: 28px;

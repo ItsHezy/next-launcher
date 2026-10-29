@@ -46,7 +46,7 @@ impl LaunchState {
         self.running.lock().map(|r| !r.is_empty()).unwrap_or(false)
     }
 
-    fn is_running(&self, app_name: &str) -> bool {
+    pub fn is_running(&self, app_name: &str) -> bool {
         self.running
             .lock()
             .map(|r| r.contains_key(app_name))

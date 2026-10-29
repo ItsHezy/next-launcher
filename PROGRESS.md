@@ -9,9 +9,42 @@
 - [x] **Phase 4: Downloads and installs** (2026-10-29). Live install, verify, repair, move and resume of a small free game into `test-installs/`.
 - [x] **Phase 5: Launch** (2026-10-29). Test game started from the app, "Playing" shown, playtime recorded and reported to Epic.
 - [x] **Phase 6: Store** (2026-10-29). Live store: Featured, free games, on sale, new releases, search, product pages; wishlist, cart and checkout on Epic's own pages, signed in.
-- [ ] Phase 7: Settings, wallet, profile menu
+- [x] **Phase 7: Settings, wallet, profile menu** (2026-10-29). Real account, connections and wallet data; in-app edits where Epic permits; every other row opens Epic's verified page, signed in.
 - [ ] Phase 8: Cloud saves
 - [ ] Phase 9: Polish and ship
+
+## Phase 7 summary
+
+What works (verified live on the owner's account, read-only):
+- **Account**: display name, email, country, communication language, 2FA status and connected
+  accounts from Epic's API. Name and language can be changed in-app (Epic grants the launcher
+  that permission); email, country, password, privacy, data download and deletion open the right
+  Epic page, signed in. Rows for pages Epic doesn't have (active sessions, sign-in history) are gone.
+- **Wallet & rewards**: Epic Rewards and coupon count from the API; "Not in your region" for the
+  wallet balance (Epic reports the wallet as unsupported there). Redeem code is in-app.
+  Add funds, gift cards, V-Bucks cards, transactions, payment settings and gifts open Epic's pages.
+- **Profile menu**: Account, Gifts & coupons, Redeem code, Settings, Help, Legal, Sign out wired;
+  online status says plainly that friends see you offline (no chat connection, ADR 0011).
+- Every Epic page path was checked in the signed-in window; five Phase 0 guesses were wrong
+  and are fixed (payments, messaging, rewards, code redemption, gifts).
+- **Settings leftovers done**: hidden games (hide from the library menu, show again from
+  Settings), install-folder picker (Windows' own dialog), connection / folder / disk checks,
+  open logs folder, debug logging, proxy (applies on restart), real app version, "Open on".
+- **Downloads**: auto-update after each library sync (not for folders shared with the official
+  launcher, running games, or games switched off), "only when idle", verify after install.
+- Fixed: a relative `--data-dir` put dev WebView2 profiles under `target\release`.
+- 109 Rust tests (29 api, 10 auth, 18 cache, 17 download, 3 import, 10 launch, 9 manifest, 13 app).
+
+Measured: warm 388 ms (under the 400 ms budget this run), cold 411 ms, idle 105.7 MB / 0.05 % CPU,
+installer 3.26 MiB.
+
+Not exercised live (they would change the account or need a code): changing the display name
+or language, redeeming a code, auto-update (no update was available). Unit-tested instead.
+
+Known gaps:
+- Achievements list (no global Epic page; GraphQL to try in Phase 9).
+- Tray, autostart, start minimized and notifications are Phase 9 (shown disabled).
+- Online status / friends need Epic's chat connection (not planned yet).
 
 ## Phase 6 summary
 

@@ -21,6 +21,9 @@ pub struct Paths {
 
 impl Paths {
     pub fn resolve(override_dir: Option<PathBuf>) -> Self {
+        // WebView2 resolves a relative profile folder from the exe's folder, SQLite from the
+        // current one: make `--data-dir` absolute so both land in the same place.
+        let override_dir = override_dir.map(|d| std::path::absolute(&d).unwrap_or(d));
         let root = override_dir.unwrap_or_else(default_root);
         Self {
             db: root.join("next-launcher.sqlite3"),
@@ -31,6 +34,11 @@ impl Paths {
             webview_web: root.join("webview").join("web"),
             root,
         }
+    }
+
+    /// Present when Settings → Support → Debug logging is on (read before logging starts).
+    pub fn debug_marker(&self) -> PathBuf {
+        self.root.join("debug-logging")
     }
 
     pub fn ensure(&self) -> std::io::Result<()> {

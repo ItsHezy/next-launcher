@@ -23,6 +23,9 @@ import { commands } from './lib/bindings';
 import { boot } from './lib/boot';
 import { auth } from './lib/state/auth.svelte';
 import { library } from './lib/state/library.svelte';
+import { router } from './lib/state/router.svelte';
+import { settings } from './lib/state/settings.svelte';
+import { account } from './lib/state/account.svelte';
 
 async function start() {
   // Cap the wait: a broken font must never block the app (timers are throttled
@@ -54,6 +57,11 @@ async function start() {
   // After first paint: follow the session that Rust is restoring, and library changes.
   void auth.init();
   void library.init();
+  void account.init();
+
+  // Settings → General → Open on (Library by default; never the Store).
+  const openOn = settings.get('general.openOn');
+  if (!boot.devRoute && (openOn === 'unreal' || openOn === 'fab')) router.go(openOn);
 
   if (boot.devRoute) {
     const { applyDevRoute } = await import('./lib/dev');

@@ -1,6 +1,6 @@
 //! Account service. Spec: docs/protocol/account.md.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::error::ApiError;
 use crate::http::{Client, Retry};
@@ -23,6 +23,40 @@ pub struct AccountInfo {
     pub email_verified: Option<bool>,
     #[serde(default)]
     pub can_update_display_name: Option<bool>,
+    #[serde(default)]
+    pub last_display_name_change: Option<String>,
+    #[serde(default)]
+    pub number_of_display_name_changes: Option<u32>,
+}
+
+/// Fields the account owner may change through the API (`account:public:account UPDATE`).
+/// Email, password and country are never sent: those stay on Epic's pages.
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountUpdate {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preferred_language: Option<String>,
+}
+
+/// `PUT /account/api/public/account/<id>`; returns the updated account.
+pub async fn update_account(
+    client: &Client,
+    access: &Secret,
+    account_id: &str,
+    update: &AccountUpdate,
+) -> Result<AccountInfo, ApiError> {
+    let req = client
+        .http()
+        .put(format!(
+            "{}/account/api/public/account/{}",
+            client.hosts().account,
+            account_id
+        ))
+        .bearer_auth(access.expose())
+        .json(update);
+    client.json(req, Retry::Never).await
 }
 
 /// `GET /account/api/public/account/<id>`.

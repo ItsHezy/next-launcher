@@ -2,7 +2,7 @@
 
 Crate: `egs-api::wallet`.
 
-## Wallet summary (balance, Epic Rewards, coupon count) — [REF], permission [GUESS]
+## Wallet summary (balance, Epic Rewards, coupon count) — [OBS] Phase 7
 
 `GET https://egs-platform-service.store.epicgames.com/api/v1/private/egs/account/wallet?locale=<lc>&store=EGS` (bearer)
 
@@ -15,8 +15,9 @@ Crate: `egs-api::wallet`.
 }
 ```
 
-- Needs a reward-accounts read permission (community docs suggest `reward:public:{accountId}:reward-accounts READ`).
-  Phase 7 checks whether the launcher token gets 200. `{"errorMessage":"Unauthorized"}` means it doesn't.
+- The launcher token has `payment:public:<id>:wallet` and `reward:public:<id>:reward-accounts` READ
+  and gets 200 **[OBS]**. On the owner's account: `wallet.__typename = "EpicWalletUnsupported"`
+  (not offered in the region), `epicRewards.__typename = "EpicRewardsSupported"`, coupons count present.
 - `__typename` variants other than `...Supported` (e.g. Wallet unavailable in the user's country)
   ⇒ hide that row and show "Not available in your region".
 - Balances are display strings already formatted by Epic in the account currency. We show them
@@ -26,7 +27,7 @@ Crate: `egs-api::wallet`.
 - If the endpoint is not permitted: the top-bar button shows a wallet icon without a balance, and
   the popover offers the web links below.
 
-## Redeem a code — [REF], permission [GUESS]
+## Redeem a code — [REF], permission [OBS]
 
 `POST https://fulfillment-public-service-prod.ol.epicgames.com/fulfillment/api/public/accounts/<accountId>/codes/<CODE_WITHOUT_DASHES>` (bearer)
 
@@ -37,9 +38,10 @@ Errors to map:
 - `errors.com.epicgames.ecommerce.fulfillment.code_not_redeemable.coupon_code` (1002) → "This is a coupon. Use it at checkout."
 - not found / invalid → "That code isn't valid."
 
-Requires `fulfillment:public:code CREATE`. If the launcher token lacks it, the "Redeem code" row
-opens `https://store.epicgames.com/redeem` in the signed-in web window (route exists, 403 to curl
-because the site blocks scripted requests [OBS]).
+Requires `fulfillment:public:code CREATE`, which the launcher token has **[OBS]**, so codes are
+redeemed in-app (dialog; code normalised to letters/digits, sent once, never retried or logged).
+Not exercised live (no spare code); error mapping is unit-tested. Without the permission the row
+opens `accounts.epicgames.com/account/code-redemption`.
 
 The code is typed by the user in our dialog and sent once on their click. Never logged.
 
@@ -47,14 +49,14 @@ The code is typed by the user in our dialog and sent once on their click. Never 
 
 | Feature | URL | Conf. |
 |---|---|---|
-| Add funds | `https://store.epicgames.com/wallet` | [OBS] route (301 from `/en-US/wallet`) |
-| Redeem Epic gift card | `https://store.epicgames.com/redeem` (same page as codes) | [OBS] route |
-| Redeem Fortnite V-Bucks card | `https://www.fortnite.com/vbuckscard` | [GUESS] |
-| Transaction history | `https://accounts.epicgames.com/account/transactions` | [OBS] route (→ `/transactions/purchases`) |
-| Payment methods | `https://accounts.epicgames.com/account/payment-management` | [GUESS] |
-| Refund requests | from a transaction row on the transactions page (Epic's refund form) | [GUESS] |
-| Gifts | `https://accounts.epicgames.com/account/gifts` (or a store gifts page) | [GUESS] |
-| Coupons | `https://accounts.epicgames.com/account/coupons` | [GUESS] |
-| Epic Rewards details | `https://accounts.epicgames.com/account/rewards` | [GUESS] |
+| Add funds | `https://store.epicgames.com/wallet` | [OBS] route (301 from `/en-US/wallet`); wallet unsupported in the owner's region |
+| Redeem Epic gift card / code | `https://accounts.epicgames.com/account/code-redemption` | [OBS] Phase 7 |
+| Redeem Fortnite V-Bucks card | `https://www.fortnite.com/vbuckscard` | [OBS] Phase 7 |
+| Transaction history | `https://accounts.epicgames.com/account/transactions` | [OBS] (→ `/transactions/purchases`) |
+| Payment methods | `https://accounts.epicgames.com/account/payments` | [OBS] Phase 7 ("Payment settings") |
+| Refund requests | from a purchase on the transactions page (Epic's refund form) | [REF] |
+| Gifts | `https://accounts.epicgames.com/account/transactions/gifts` | [OBS] Phase 7 |
+| Coupons | no page (404); the count comes from the wallet API and coupons apply at checkout | [OBS] |
+| Epic Rewards details | `https://accounts.epicgames.com/account/rewards` | [OBS] Phase 7 |
 
 Every payment-related action happens on Epic's page and is completed by the user.

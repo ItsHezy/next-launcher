@@ -55,10 +55,35 @@ export const commands = {
 	 *  Purchases always finish there, by the user; we never press anything on that page.
 	 */
 	storeOpen: (target: StoreTarget) => typedError<null, UiError>(__TAURI_INVOKE("store_open", { target })),
+	accountDetails: (force: boolean) => typedError<AccountDetails_Serialize, UiError>(__TAURI_INVOKE("account_details", { force })),
+	/**
+	 *  Change the display name or communication language (the UI asks first). Only fields
+	 *  the token may update are sent; everything else stays on Epic's pages.
+	 */
+	updateAccount: (edit: AccountEdit_Deserialize) => typedError<AccountDetails_Serialize, UiError>(__TAURI_INVOKE("update_account", { edit })),
+	walletSummary: (force: boolean) => typedError<WalletInfo_Serialize, UiError>(__TAURI_INVOKE("wallet_summary", { force })),
+	/**  Redeem a code the user typed (sent once, on their click; never logged). */
+	redeemCode: (code: string) => typedError<RedeemResult, UiError>(__TAURI_INVOKE("redeem_code", { code })),
+	accountCapabilities: () => __TAURI_INVOKE<Capabilities>("account_capabilities"),
+	appInfo: () => __TAURI_INVOKE<AppInfo>("app_info"),
+	/**  Can Epic be reached? Signed in: a token check; otherwise a public endpoint. */
+	checkConnection: () => typedError<CheckResult, UiError>(__TAURI_INVOKE("check_connection")),
+	/**
+	 *  Can games be written to the install folder? Writes and deletes one small file there
+	 *  (or in its nearest existing parent; the folder itself is never created by a check).
+	 */
+	checkInstallFolder: () => typedError<CheckResult, UiError>(__TAURI_INVOKE("check_install_folder")),
+	checkDisk: () => typedError<CheckResult, UiError>(__TAURI_INVOKE("check_disk")),
+	openLogsFolder: () => typedError<null, UiError>(__TAURI_INVOKE("open_logs_folder")),
+	hiddenGames: () => typedError<HiddenGame[], UiError>(__TAURI_INVOKE("hidden_games")),
+	setHidden: (appName: string, hidden: boolean) => typedError<null, UiError>(__TAURI_INVOKE("set_hidden", { appName, hidden })),
+	/**  Let the user pick a folder (Windows' own folder dialog). `None` if cancelled. */
+	pickFolder: (title: string) => typedError<string | null, UiError>(__TAURI_INVOKE("pick_folder", { title })),
 };
 
 /** Events */
 export const events = {
+	accountChanged: makeEvent<AccountChanged, AccountChanged>("account-changed"),
 	authChanged: makeEvent<AuthChanged_Serialize, AuthChanged_Deserialize>("auth-changed"),
 	downloadProgress: makeEvent<DownloadProgress, DownloadProgress>("download-progress"),
 	gameRunning: makeEvent<GameRunning, GameRunning>("game-running"),
@@ -68,6 +93,53 @@ export const events = {
 };
 
 /* Types */
+/**  Account details or the wallet changed (the UI re-reads them). */
+export type AccountChanged = {
+	what: string,
+};
+
+export type AccountDetails = AccountDetails_Serialize | AccountDetails_Deserialize;
+
+export type AccountDetails_Deserialize = {
+	displayName: string,
+	email?: string | null,
+	country?: string | null,
+	preferredLanguage?: string | null,
+	tfaEnabled?: boolean | null,
+	/**  Epic allows a display name change now. */
+	canChangeName: boolean,
+	lastNameChange?: string | null,
+	/**  `None` when the token can't read them (the row then opens Epic's page). */
+	connections?: Connection_Deserialize[] | null,
+	capabilities: Capabilities,
+};
+
+export type AccountDetails_Serialize = {
+	displayName: string,
+	email: string | null,
+	country: string | null,
+	preferredLanguage: string | null,
+	tfaEnabled: boolean | null,
+	/**  Epic allows a display name change now. */
+	canChangeName: boolean,
+	lastNameChange: string | null,
+	/**  `None` when the token can't read them (the row then opens Epic's page). */
+	connections: Connection_Serialize[] | null,
+	capabilities: Capabilities,
+};
+
+export type AccountEdit = AccountEdit_Serialize | AccountEdit_Deserialize;
+
+export type AccountEdit_Deserialize = {
+	displayName?: string | null,
+	preferredLanguage?: string | null,
+};
+
+export type AccountEdit_Serialize = {
+	displayName: string | null,
+	preferredLanguage: string | null,
+};
+
 export type AccountRow = AccountRow_Serialize | AccountRow_Deserialize;
 
 export type AccountRow_Deserialize = {
@@ -84,6 +156,11 @@ export type AccountRow_Serialize = {
 	email: string | null,
 	country: string | null,
 	signedIn: boolean,
+};
+
+export type AppInfo = {
+	version: string,
+	dataDir: string,
 };
 
 /**  Emitted whenever [`AuthStatus`] changes. */
@@ -124,12 +201,42 @@ export type AuthStatus_Serialize =
 /**  Epic wants the user to finish something on its website first. */
 { state: "needsAction"; displayName: string; action: string };
 
+/**  What the launcher token may do, from `verify?includePerms=true` (account.md). */
+export type Capabilities = {
+	/**  Display name and communication language in-app. */
+	updateAccount: boolean,
+	connections: boolean,
+	redeem: boolean,
+	wallet: boolean,
+	/**  "Sign out of all devices" through the API (else Epic's page). */
+	signOutOthers: boolean,
+};
+
+export type CheckResult = {
+	ok: boolean,
+	message: string,
+};
+
 export type Component = {
 	id: string,
 	title: string,
 	description: string,
 	required: boolean,
 	size: number | null,
+};
+
+export type Connection = Connection_Serialize | Connection_Deserialize;
+
+export type Connection_Deserialize = {
+	/**  `psn`, `xbl`, `nintendo`, `steam`, `discord`, ... */
+	kind: string,
+	name?: string | null,
+};
+
+export type Connection_Serialize = {
+	/**  `psn`, `xbl`, `nintendo`, `steam`, `discord`, ... */
+	kind: string,
+	name: string | null,
 };
 
 /**  Live progress of the running download (throttled to ~4/s). */
@@ -155,7 +262,7 @@ export type DownloadRow = {
 };
 
 /**  Epic pages that open signed in (docs/protocol/account.md, wallet-and-redeem.md). */
-export type EpicPage = "accountPersonal" | "password" | "connections" | "privacy" | "emailPreferences" | "transactions" | "paymentMethods" | "wallet" | "redeem";
+export type EpicPage = "accountPersonal" | "password" | "connections" | "emailPreferences" | "transactions" | "paymentMethods" | "wallet" | "redeem" | "gifts" | "rewards" | "vbucksCard" | "support" | "terms" | "privacyPolicy" | "refundPolicy" | "publisherIndex" | "eula";
 
 export type FrontendMark = {
 	name: string,
@@ -227,6 +334,11 @@ export type GameRow_Serialize = {
 export type GameRunning = {
 	appName: string,
 	running: boolean,
+};
+
+export type HiddenGame = {
+	appName: string,
+	title: string,
 };
 
 export type ImportCandidate = {
@@ -354,6 +466,11 @@ export type MoveResult = {
 	renamed: boolean,
 	/**  Some old files couldn't be deleted after the copy (in use); they are safe to remove. */
 	leftBehind: boolean,
+};
+
+export type RedeemResult = {
+	/**  What the code added, e.g. game names. */
+	items: string[],
 };
 
 /**  A stored setting. Settings are flat `section.key` → scalar. */
@@ -504,6 +621,26 @@ export type UninstallOptions = {
 export type VerifyResult = {
 	filesChecked: number | null,
 	problems: string[],
+};
+
+export type WalletInfo = WalletInfo_Serialize | WalletInfo_Deserialize;
+
+export type WalletInfo_Deserialize = {
+	/**  Formatted by Epic in the account currency, shown as-is. */
+	balance?: string | null,
+	rewards?: string | null,
+	coupons?: number | null,
+	/**  The summary came from Epic (else only the web links work). */
+	available: boolean,
+};
+
+export type WalletInfo_Serialize = {
+	/**  Formatted by Epic in the account currency, shown as-is. */
+	balance: string | null,
+	rewards: string | null,
+	coupons: number | null,
+	/**  The summary came from Epic (else only the web links work). */
+	available: boolean,
 };
 
 export type WindowAction = "minimize" | "toggleMaximize" | "close";

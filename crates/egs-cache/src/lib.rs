@@ -290,6 +290,32 @@ impl Cache {
         Ok(())
     }
 
+    /// Hide a game from the library (or show it again). Hidden games keep their data.
+    pub fn set_hidden(&self, app_name: &str, hidden: bool) -> Result<(), Error> {
+        let conn = self.lock()?;
+        conn.execute(
+            "UPDATE games SET hidden = ?2, updated_at = ?3 WHERE app_name = ?1",
+            params![app_name, hidden, now_secs()],
+        )?;
+        Ok(())
+    }
+
+    /// Hidden games of the current account: `(app_name, title)`, by title.
+    pub fn hidden_games(&self) -> Result<Vec<(String, String)>, Error> {
+        let conn = self.lock()?;
+        let mut stmt = conn.prepare_cached(
+            "SELECT app_name, title FROM games WHERE hidden = 1 AND is_dlc = 0 AND (owner IS NULL OR owner =
+               (SELECT account_id FROM accounts WHERE signed_in = 1 ORDER BY updated_at DESC LIMIT 1))
+             ORDER BY title COLLATE NOCASE",
+        )?;
+        let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        let mut out = Vec::new();
+        for r in rows {
+            out.push(r?);
+        }
+        Ok(out)
+    }
+
     /// The account whose session should be restored on start, if any.
     pub fn signed_in_account(&self) -> Result<Option<String>, Error> {
         let conn = self.lock()?;

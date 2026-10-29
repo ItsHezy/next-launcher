@@ -1,7 +1,7 @@
 <script lang="ts">
   import { dismiss } from '../actions';
   import { commands, type StoreTarget } from '../bindings';
-  import { wallet } from '../mock';
+  import { account } from '../state/account.svelte';
   import { auth } from '../state/auth.svelte';
   import { library } from '../state/library.svelte';
   import { router, type Route } from '../state/router.svelte';
@@ -97,11 +97,11 @@
         class="wallet-btn"
         aria-haspopup="dialog"
         aria-expanded={ui.popover === 'wallet'}
-        aria-label={wallet.balance ? `Wallet, balance ${wallet.balance}` : 'Wallet'}
+        aria-label={account.wallet?.balance ? `Wallet, balance ${account.wallet.balance}` : 'Wallet'}
         onclick={() => ui.toggle('wallet')}
       >
         <Icon name="wallet" size={18} />
-        <span>{wallet.balance ?? 'Wallet'}</span>
+        <span>{account.wallet?.balance ?? 'Wallet'}</span>
       </button>
       {#if ui.popover === 'wallet'}
         <div use:dismiss={{ onclose: () => ui.close(), trigger: () => walletBtn }}>

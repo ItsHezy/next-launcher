@@ -43,6 +43,12 @@ export function move(appName: string) {
   ui.dialog = { kind: 'move', appName };
 }
 
+/** Hide from the library (shown again from Settings → General → Hidden games). */
+export async function hide(appName: string, title: string) {
+  const res = await commands.setHidden(appName, true);
+  ui.toast(res.status === 'ok' ? `${title} is hidden. Settings → General shows hidden games.` : res.error.message);
+}
+
 export async function update(appName: string, title: string) {
   const res = await commands.startUpdate(appName);
   ui.toast(res.status === 'ok' ? `Updating ${title}.` : res.error.message);

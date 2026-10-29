@@ -15,14 +15,20 @@ export type Row =
   | { kind: 'value'; label: string; desc?: string; value: string; action: Action }
   | { kind: 'button'; label: string; desc?: string; button: string; action: Action }
   | { kind: 'danger'; label: string; desc?: string; button: string; action: Action }
-  | { kind: 'web'; label: string; desc?: string; action: Action };
+  | { kind: 'web'; label: string; desc?: string; action: Action }
+  /** A value with nothing to change here. */
+  | { kind: 'info'; label: string; desc?: string; value: string };
 
 /** What a row does when used. Phase numbers say where the real behaviour lands. */
 export type Action =
   | { type: 'soon'; what: string; phase: number }
-  | { type: 'web'; what: string; phase: number; page?: EpicPage }
+  /** Epic's own page in the signed-in web window. */
+  | { type: 'web'; page: EpicPage }
   | { type: 'goto'; section: SettingsSection }
-  | { type: 'import' };
+  | { type: 'import' }
+  /** An in-app dialog; `fallback` opens instead when Epic doesn't let us do it in-app. */
+  | { type: 'dialog'; dialog: 'displayName' | 'language' | 'redeem' | 'hidden'; fallback?: EpicPage }
+  | { type: 'cmd'; cmd: 'checkConnection' | 'checkFolder' | 'checkDisk' | 'openLogs' };
 
 export interface Group {
   title?: string;
@@ -39,9 +45,10 @@ export interface Section {
   groups: Group[];
 }
 
-/** An Epic page; with `page` it opens signed in now, otherwise it lands in `phase`. */
-const web = (what: string, phase = 7, page?: EpicPage): Action => ({ type: 'web', what, phase, page });
+const web = (page: EpicPage): Action => ({ type: 'web', page });
 const soon = (what: string, phase: number): Action => ({ type: 'soon', what, phase });
+const cmd = (c: Extract<Action, { type: 'cmd' }>['cmd']): Action => ({ type: 'cmd', cmd: c });
+const LATER = 'Arrives with the tray, autostart and notifications update';
 
 export const SECTIONS: Section[][] = [
   [
@@ -55,42 +62,41 @@ export const SECTIONS: Section[][] = [
         {
           title: 'Profile',
           rows: [
-            { kind: 'value', label: 'Display name', value: '{displayName}', action: soon('Changing your display name', 7) },
-            { kind: 'value', label: 'Email', value: '{email}', action: web('Change email', 7, 'accountPersonal') },
-            { kind: 'value', label: 'Country', value: '{country}', action: web('Change country', 7, 'accountPersonal') },
-            { kind: 'value', label: 'Communication language', value: 'English', action: soon('Communication language', 7) },
+            { kind: 'value', label: 'Display name', value: '{displayName}', action: { type: 'dialog', dialog: 'displayName', fallback: 'accountPersonal' } },
+            { kind: 'value', label: 'Email', desc: "Changed on Epic's page", value: '{email}', action: web('accountPersonal') },
+            { kind: 'value', label: 'Country', desc: "Changed on Epic's page", value: '{country}', action: web('accountPersonal') },
+            { kind: 'value', label: 'Communication language', value: '{language}', action: { type: 'dialog', dialog: 'language', fallback: 'accountPersonal' } },
           ],
         },
         {
           title: 'Sign-in & security',
           rows: [
-            { kind: 'web', label: 'Password', desc: 'Change your Epic account password', action: web('Password', 7, 'password') },
-            { kind: 'value', label: 'Two-factor authentication', value: 'On', action: web('Two-factor authentication', 7, 'password') },
-            { kind: 'web', label: 'Active sessions', action: web('Active sessions') },
-            { kind: 'web', label: 'Sign-in history', action: web('Sign-in history') },
+            { kind: 'web', label: 'Password', desc: 'Change your Epic account password', action: web('password') },
+            { kind: 'value', label: 'Two-factor authentication', value: '{tfa}', action: web('password') },
           ],
         },
         {
           title: 'Connected accounts',
           rows: [
-            { kind: 'value', label: 'PlayStation', value: 'Not connected', action: web('Connections', 7, 'connections') },
-            { kind: 'value', label: 'Xbox', value: 'Connected', action: web('Connections', 7, 'connections') },
-            { kind: 'value', label: 'Nintendo', value: 'Not connected', action: web('Connections', 7, 'connections') },
-            { kind: 'value', label: 'Steam', value: 'Not connected', action: web('Connections', 7, 'connections') },
-            { kind: 'value', label: 'Discord', value: 'Not connected', action: web('Connections', 7, 'connections') },
+            { kind: 'value', label: 'PlayStation', value: '{conn.psn}', action: web('connections') },
+            { kind: 'value', label: 'Xbox', value: '{conn.xbl}', action: web('connections') },
+            { kind: 'value', label: 'Nintendo', value: '{conn.nintendo}', action: web('connections') },
+            { kind: 'value', label: 'Steam', value: '{conn.steam}', action: web('connections') },
+            { kind: 'value', label: 'Discord', value: '{conn.discord}', action: web('connections') },
+            { kind: 'value', label: 'Other connected accounts', value: '{conn.other}', action: web('connections') },
           ],
         },
         {
           title: 'Privacy',
           rows: [
-            { kind: 'web', label: 'Privacy settings', desc: 'Who can find you, see your activity and send requests', action: web('Privacy settings', 7, 'privacy') },
-            { kind: 'web', label: 'Download my data', action: web('Download my data', 7, 'privacy') },
+            { kind: 'web', label: 'Privacy & your data', desc: "Epic's account settings page: privacy, data download", action: web('accountPersonal') },
+            { kind: 'web', label: 'Communication preferences', desc: 'Emails and messages from Epic', action: web('emailPreferences') },
           ],
         },
         {
           rows: [
-            { kind: 'button', label: 'Sign out of all devices', desc: 'Ends every session except this one', button: 'Sign out everywhere', action: soon('Signing out of other devices', 7) },
-            { kind: 'danger', label: 'Delete account', desc: "Opens Epic's account deletion page", button: 'Delete account…', action: web('Account deletion', 7, 'accountPersonal') },
+            { kind: 'web', label: 'Sign out of all devices', desc: "On Epic's password & security page (Epic doesn't let launchers do it)", action: web('password') },
+            { kind: 'danger', label: 'Delete account', desc: "Opens Epic's account page, where deletion is Epic's own flow", button: 'Delete account…', action: web('accountPersonal') },
           ],
         },
       ],
@@ -104,21 +110,22 @@ export const SECTIONS: Section[][] = [
         {
           title: 'Balance',
           rows: [
-            { kind: 'value', label: 'Wallet balance', value: '{balance}', action: web('Wallet', 7, 'wallet') },
-            { kind: 'value', label: 'Epic Rewards', value: '{rewards}', action: web('Epic Rewards') },
-            { kind: 'button', label: 'Add funds', button: 'Add funds', action: web('Add funds', 7, 'wallet') },
-            { kind: 'button', label: 'Redeem gift card', desc: 'Epic Games and Fortnite gift cards', button: 'Redeem', action: web('Redeem gift card', 7, 'redeem') },
-            { kind: 'button', label: 'Redeem code', button: 'Enter code', action: soon('Redeeming codes', 7) },
+            { kind: 'value', label: 'Wallet balance', value: '{balance}', action: web('wallet') },
+            { kind: 'value', label: 'Epic Rewards', value: '{rewards}', action: web('rewards') },
+            { kind: 'button', label: 'Add funds', desc: "On Epic's page; you confirm any payment there", button: 'Add funds', action: web('wallet') },
+            { kind: 'button', label: 'Redeem Epic gift card', button: 'Redeem', action: web('redeem') },
+            { kind: 'button', label: 'Redeem Fortnite V-Bucks card', button: 'Redeem', action: web('vbucksCard') },
+            { kind: 'button', label: 'Redeem code', desc: 'Game keys and other codes', button: 'Enter code', action: { type: 'dialog', dialog: 'redeem', fallback: 'redeem' } },
           ],
         },
         {
           title: 'History & payments',
           rows: [
-            { kind: 'web', label: 'Transaction history', action: web('Transaction history', 7, 'transactions') },
-            { kind: 'web', label: 'Payment methods', action: web('Payment methods', 7, 'paymentMethods') },
-            { kind: 'web', label: 'Refund requests', action: web('Refund requests', 7, 'transactions') },
-            { kind: 'web', label: 'Gifts', action: web('Gifts') },
-            { kind: 'value', label: 'Coupons', value: '{coupons}', action: web('Coupons') },
+            { kind: 'web', label: 'Transaction history', action: web('transactions') },
+            { kind: 'web', label: 'Payment methods', action: web('paymentMethods') },
+            { kind: 'web', label: 'Refund requests', desc: 'From a purchase in your transaction history', action: web('transactions') },
+            { kind: 'web', label: 'Gifts', action: web('gifts') },
+            { kind: 'info', label: 'Coupons', desc: 'Applied at checkout on Epic\'s store', value: '{coupons}' },
           ],
         },
       ],
@@ -135,9 +142,9 @@ export const SECTIONS: Section[][] = [
           title: 'App',
           rows: [
             { kind: 'select', label: 'Language', key: 'general.language', options: [{ value: 'en-US', label: 'English (US)' }] },
-            { kind: 'toggle', label: 'Run at startup', key: 'general.runAtStartup' },
-            { kind: 'toggle', label: 'Start minimized', key: 'general.startMinimized' },
-            { kind: 'toggle', label: 'Minimize to tray on close', key: 'general.minimizeToTray' },
+            { kind: 'toggle', label: 'Run at startup', key: 'general.runAtStartup', disabled: LATER },
+            { kind: 'toggle', label: 'Start minimized', key: 'general.startMinimized', disabled: LATER },
+            { kind: 'toggle', label: 'Minimize to tray on close', key: 'general.minimizeToTray', disabled: LATER },
             {
               kind: 'select',
               label: 'Open on',
@@ -153,7 +160,7 @@ export const SECTIONS: Section[][] = [
         {
           title: 'Library',
           rows: [
-            { kind: 'value', label: 'Hidden games', desc: 'Games you hid from your library', value: 'None', action: soon('Hiding games', 3) },
+            { kind: 'value', label: 'Hidden games', desc: 'Hide a game from its menu in the library', value: '{hidden}', action: { type: 'dialog', dialog: 'hidden' } },
             { kind: 'toggle', label: 'Show uninstalled games', key: 'general.showUninstalled' },
             {
               kind: 'select',
@@ -201,18 +208,18 @@ export const SECTIONS: Section[][] = [
               ],
             },
             { kind: 'toggle', label: 'Pause downloads while playing', key: 'downloads.pauseWhilePlaying' },
-            {
-              kind: 'select',
-              label: 'Simultaneous downloads',
-              key: 'downloads.simultaneous',
-              options: [1, 2, 3].map((n) => ({ value: n, label: String(n) })),
-            },
+            { kind: 'info', label: 'Simultaneous downloads', desc: 'One game at a time; the queue continues on its own', value: '1' },
           ],
         },
         {
           title: 'Updates',
           rows: [
-            { kind: 'toggle', label: 'Update games automatically', key: 'downloads.autoUpdate' },
+            {
+              kind: 'toggle',
+              label: 'Update games automatically',
+              desc: 'Games shared with the Epic Games Launcher update only when you click Update',
+              key: 'downloads.autoUpdate',
+            },
             { kind: 'toggle', label: 'Update only when idle', desc: 'Wait until you are not using the computer', key: 'downloads.updateOnlyIdle' },
             { kind: 'toggle', label: 'Verify files after install', key: 'downloads.verifyAfterInstall' },
           ],
@@ -223,11 +230,10 @@ export const SECTIONS: Section[][] = [
             {
               kind: 'select',
               label: 'Cache size',
-              desc: 'Memory used to reassemble files while downloading',
+              desc: 'Memory used to reassemble files while downloading (nothing is cached on disk)',
               key: 'downloads.cacheSizeMb',
               options: [128, 256, 512, 1024].map((n) => ({ value: n, label: `${n} MB` })),
             },
-            { kind: 'button', label: 'Clear download cache', button: 'Clear', action: soon('Download cache', 4) },
           ],
         },
       ],
@@ -241,18 +247,18 @@ export const SECTIONS: Section[][] = [
         {
           title: 'Notify me about',
           rows: [
-            { kind: 'toggle', label: 'Free games', key: 'notifications.freeGames' },
-            { kind: 'toggle', label: 'News & offers', key: 'notifications.newsOffers' },
+            { kind: 'toggle', label: 'Free games', key: 'notifications.freeGames', disabled: LATER },
+            { kind: 'toggle', label: 'News & offers', key: 'notifications.newsOffers', disabled: LATER },
             { kind: 'toggle', label: 'Chat messages', key: 'notifications.chat', disabled: 'Available when friends & chat are supported' },
             { kind: 'toggle', label: 'Invites', key: 'notifications.invites', disabled: 'Available when friends & chat are supported' },
-            { kind: 'toggle', label: 'Download finished', key: 'notifications.downloadFinished' },
+            { kind: 'toggle', label: 'Download finished', key: 'notifications.downloadFinished', disabled: LATER },
           ],
         },
         {
           title: 'Behavior',
           rows: [
-            { kind: 'toggle', label: 'Play a sound', key: 'notifications.sound' },
-            { kind: 'toggle', label: 'Do not disturb while playing', key: 'notifications.dndWhilePlaying' },
+            { kind: 'toggle', label: 'Play a sound', key: 'notifications.sound', disabled: LATER },
+            { kind: 'toggle', label: 'Do not disturb while playing', key: 'notifications.dndWhilePlaying', disabled: LATER },
           ],
         },
       ],
@@ -292,9 +298,14 @@ export const SECTIONS: Section[][] = [
         {
           title: 'Proxy',
           rows: [
-            { kind: 'toggle', label: 'Use a proxy', key: 'network.proxyEnabled' },
+            {
+              kind: 'toggle',
+              label: 'Use a proxy',
+              desc: "Applies after restarting Next Launcher. Epic's web pages use Windows' proxy settings.",
+              key: 'network.proxyEnabled',
+            },
             { kind: 'text', label: 'Proxy address', key: 'network.proxyAddress', placeholder: 'http://host:port', enabledBy: 'network.proxyEnabled' },
-            { kind: 'button', label: 'Test connection', desc: "Checks that Epic's services can be reached", button: 'Test', action: soon('Connection test', 2) },
+            { kind: 'button', label: 'Test connection', desc: "Checks that Epic's services can be reached", button: 'Test', action: cmd('checkConnection') },
           ],
         },
       ],
@@ -311,22 +322,22 @@ export const SECTIONS: Section[][] = [
         {
           title: 'Troubleshoot',
           rows: [
-            { kind: 'button', label: 'Connection', desc: "Can Next Launcher reach Epic's servers?", button: 'Check', action: soon('Connection check', 2) },
-            { kind: 'button', label: 'Folder permissions', desc: 'Can games be written to your install folder?', button: 'Check', action: soon('Permission check', 4) },
-            { kind: 'button', label: 'Disk space', button: 'Check', action: soon('Disk check', 4) },
+            { kind: 'button', label: 'Connection', desc: "Can Next Launcher reach Epic's servers?", button: 'Check', action: cmd('checkConnection') },
+            { kind: 'button', label: 'Folder permissions', desc: 'Can games be written to your install folder?', button: 'Check', action: cmd('checkFolder') },
+            { kind: 'button', label: 'Disk space', desc: 'Free space where games install', button: 'Check', action: cmd('checkDisk') },
           ],
         },
         {
           title: 'Logs',
           rows: [
-            { kind: 'button', label: 'Logs folder', desc: 'Logs never contain passwords, tokens or your email', button: 'Open folder', action: soon('Opening the logs folder', 9) },
-            { kind: 'toggle', label: 'Debug logging', key: 'support.debugLogging' },
+            { kind: 'button', label: 'Logs folder', desc: 'Logs never contain passwords, tokens or your email', button: 'Open folder', action: cmd('openLogs') },
+            { kind: 'toggle', label: 'Debug logging', desc: 'More detail in the logs; applies after restarting', key: 'support.debugLogging' },
           ],
         },
         {
           title: 'Help',
           rows: [
-            { kind: 'web', label: 'Contact Epic support', action: web('Epic support', 7) },
+            { kind: 'web', label: 'Epic Games help & support', action: web('support') },
             { kind: 'web', label: 'Report a Next Launcher bug', action: soon('Bug reports', 9) },
           ],
         },
@@ -340,11 +351,11 @@ export const SECTIONS: Section[][] = [
       groups: [
         {
           rows: [
-            { kind: 'web', label: 'Terms of Service', action: web('Terms of Service') },
-            { kind: 'web', label: 'Privacy Policy', action: web('Privacy Policy') },
-            { kind: 'web', label: 'Store Refund Policy', action: web('Store Refund Policy') },
-            { kind: 'web', label: 'Publisher Index', action: web('Publisher Index') },
-            { kind: 'web', label: 'End User License Agreement', action: web('EULA') },
+            { kind: 'web', label: 'Terms of Service', action: web('terms') },
+            { kind: 'web', label: 'Privacy Policy', action: web('privacyPolicy') },
+            { kind: 'web', label: 'Store Refund Policy', action: web('refundPolicy') },
+            { kind: 'web', label: 'Publisher Index', action: web('publisherIndex') },
+            { kind: 'web', label: 'End User License Agreement', action: web('eula') },
           ],
           footer: 'Next Launcher is an independent client and is not made by Epic Games.',
         },
@@ -359,7 +370,7 @@ export const SECTIONS: Section[][] = [
       groups: [
         {
           rows: [
-            { kind: 'value', label: 'Version', value: '0.1.0 (Phase 1 preview)', action: soon('Release notes', 9) },
+            { kind: 'info', label: 'Version', value: '{version}' },
             { kind: 'button', label: 'Check for updates', button: 'Check', action: soon('App updates', 9) },
             { kind: 'web', label: 'Open-source licenses', action: soon('License list', 9) },
           ],

@@ -8,6 +8,21 @@ AMD Ryzen 5 5600X (6C/12T), 32 GB RAM, NVMe SSD, RTX 3060 Ti, 200 Hz display, Wi
 10.0.26200, WebView2 runtime 156.0.4314.50. That's upper mid-range; numbers on a true mid-range PC
 will be somewhat higher.
 
+## Phase 7 (2026-10-29): settings, wallet, profile menu
+
+| Metric | Budget | Measured |
+|---|---|---|
+| Warm start, standard bench, median of 7 | ≤ 400 ms | **388 ms** (min 375) ✅ |
+| Cold start, standard bench, median of 7 | ≤ 1.0 s | **411 ms** ✅ (one outlier run at 1.4 s) |
+| Idle RAM, signed in | ≤ 150 MB | **105.7 MB** ✅ |
+| Idle CPU | ~0 % | **0.05 %** ✅ |
+| Installer (NSIS) | ≤ 15 MB | **3.26 MiB** ✅ (exe 8.53 MiB) |
+| Initial / total JS (gz) | 80 / 250 KB | 38.0 / 63.2 KB ✅ (account dialog lazy) |
+| Connection check (token verify) | | 120 ms |
+
+Wallet and account details load after sign-in in the background (wallet cached 5 min,
+details 2 min); nothing new runs before first paint.
+
 ## Phase 6 (2026-10-29): store
 
 | Metric | Budget | Measured |

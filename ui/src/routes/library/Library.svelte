@@ -44,13 +44,13 @@
 
   function openMenu(game: Game, x: number, y: number) {
     // Keyboard context-menu key reports 0,0: anchor to the focused element.
-    // Clamp so the tallest menu (5 items) stays on screen.
+    // Clamp so the tallest menu (6 items) stays on screen.
     if (x === 0 && y === 0 && document.activeElement instanceof HTMLElement) {
       const r = document.activeElement.getBoundingClientRect();
       x = r.left;
       y = r.bottom;
     }
-    menu = { game, x: Math.min(x, window.innerWidth - 240), y: Math.min(y, window.innerHeight - 240) };
+    menu = { game, x: Math.min(x, window.innerWidth - 240), y: Math.min(y, window.innerHeight - 290) };
   }
 </script>
 
@@ -148,6 +148,7 @@
     {:else if g.state === 'notInstalled' && g.installable}
       <button role="menuitem" onclick={() => ((menu = null), actions.install(g.appName))}>Install…</button>
     {/if}
+    <button role="menuitem" onclick={() => ((menu = null), actions.hide(g.appName, g.title))}>Hide from library</button>
   </div>
 {/if}
 

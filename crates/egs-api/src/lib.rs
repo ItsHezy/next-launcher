@@ -13,6 +13,7 @@ pub mod library;
 pub mod oauth;
 mod secret;
 pub mod store;
+pub mod wallet;
 
 pub use error::{ApiError, EpicError};
 pub use http::{Client, ClientConfig, Hosts, Retry};

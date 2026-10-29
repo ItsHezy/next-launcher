@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod account;
 mod auth;
 mod commands;
 mod console;
@@ -14,6 +15,7 @@ mod protocol;
 mod redact;
 mod startup;
 mod store;
+mod support;
 
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
@@ -121,6 +123,19 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             store::store_search,
             store::store_product,
             store::store_open,
+            account::account_details,
+            account::update_account,
+            account::wallet_summary,
+            account::redeem_code,
+            account::account_capabilities,
+            support::app_info,
+            support::check_connection,
+            support::check_install_folder,
+            support::check_disk,
+            support::open_logs_folder,
+            support::hidden_games,
+            support::set_hidden,
+            support::pick_folder,
         ])
         .events(tauri_specta::collect_events![
             auth::AuthChanged,
@@ -128,7 +143,8 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             library::SyncStatusChanged,
             install::DownloadProgress,
             install::MoveProgress,
-            launch::GameRunning
+            launch::GameRunning,
+            account::AccountChanged
         ])
 }
 
@@ -153,13 +169,31 @@ fn initial_auth(cache: &Cache, snapshot: &egs_cache::LibrarySnapshot) -> auth::A
 }
 
 /// API client with the launcher identity (docs/protocol/README.md "Client identity").
-fn api_client() -> anyhow::Result<egs_api::Client> {
+/// Explicit proxy from Settings → Network (applies on start; WebView2 windows use the
+/// Windows proxy settings).
+fn proxy_setting(cache: &Cache) -> Option<String> {
+    let on = commands::settings_value(cache, "network.proxyEnabled").as_deref() == Some("true");
+    let addr = commands::settings_value(cache, "network.proxyAddress")?;
+    let addr = addr.trim();
+    let ok = addr.starts_with("http://") || addr.starts_with("https://");
+    if on && !ok {
+        tracing::warn!("proxy address ignored: it must start with http:// or https://");
+    }
+    (on && ok).then(|| addr.to_owned())
+}
+
+fn api_client(proxy: Option<String>) -> anyhow::Result<egs_api::Client> {
     let egl_version = std::env::var_os("PROGRAMDATA")
         .and_then(|p| egs_api::detect_egl_version(std::path::Path::new(&p)))
         .unwrap_or_else(|| egs_api::DEFAULT_EGL_VERSION.to_owned());
     let ua = egs_api::launcher_user_agent(&egl_version);
     tracing::info!(egl_version = %egl_version, "API identity");
-    Ok(egs_api::Client::new(egs_api::ClientConfig::new(ua))?)
+    let mut cfg = egs_api::ClientConfig::new(ua);
+    if proxy.is_some() {
+        tracing::info!("using the proxy from Settings");
+    }
+    cfg.proxy = proxy;
+    Ok(egs_api::Client::new(cfg)?)
 }
 
 /// Open the cache and serialise everything the first paint needs.
@@ -235,7 +269,7 @@ fn main() {
             let _ = std::fs::remove_file(format!("{}{suffix}", paths.db.display()));
         }
     }
-    logging::init(&paths.logs, false);
+    logging::init(&paths.logs, paths.debug_marker().exists());
     tracing::info!(version = env!("CARGO_PKG_VERSION"), "starting");
 
     // Read the cache while Tauri and WebView2 initialise.
@@ -280,6 +314,7 @@ fn main() {
                 Ok(Err(e)) => boot_failed(&e)?,
                 Err(_) => boot_failed(&anyhow::anyhow!("boot thread panicked"))?,
             };
+            let proxy = proxy_setting(&boot.cache);
             app.manage(AppState {
                 cache: boot.cache,
                 paths: paths.clone(),
@@ -289,10 +324,11 @@ fn main() {
                 dev_action: dev_action.clone(),
                 shown: AtomicBool::new(false),
             });
-            app.manage(auth::AuthState::new(api_client()?, boot.auth));
+            app.manage(auth::AuthState::new(api_client(proxy)?, boot.auth));
             app.manage(library::LibraryState::default());
             app.manage(install::DownloadsState::new(dev_install_root.clone()));
             app.manage(launch::LaunchState::default());
+            app.manage(account::AccountState::default());
             install::apply_speed_limit(app.handle());
 
             let main = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))

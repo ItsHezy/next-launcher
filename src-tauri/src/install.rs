@@ -535,13 +535,22 @@ pub async fn queue_install(
 /// Queue an update for an installed game whose build is out of date.
 #[tauri::command]
 #[specta::specta]
-pub async fn start_update(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    auth: State<'_, AuthState>,
-    downloads: State<'_, DownloadsState>,
-    app_name: String,
-) -> Result<(), UiError> {
+pub async fn start_update(app: AppHandle, app_name: String) -> Result<(), UiError> {
+    queue_update(&app, &app_name).await
+}
+
+/// Shared by the Update button and auto-update.
+pub async fn queue_update(app: &AppHandle, app_name: &str) -> Result<(), UiError> {
+    let state = app
+        .try_state::<AppState>()
+        .ok_or_else(|| UiError::internal("app state"))?;
+    let auth = app
+        .try_state::<AuthState>()
+        .ok_or_else(|| UiError::internal("auth state"))?;
+    let downloads = app
+        .try_state::<DownloadsState>()
+        .ok_or_else(|| UiError::internal("downloads state"))?;
+    let app_name = app_name.to_owned();
     let owner = auth
         .session
         .current()
@@ -571,9 +580,63 @@ pub async fn start_update(
             0,
         )?
         .ok_or_else(|| err("busy", "This game is already downloading."))?;
-    emit_changed(&app, "download");
-    kick(&app);
+    emit_changed(app, "download");
+    kick(app);
     Ok(())
+}
+
+/// "Update games automatically" (on by default): after a library sync, queue updates for
+/// installed games. Skipped: games shared with the official launcher (their folder is
+/// only written when the user clicks Update), games switched off in Manage games,
+/// running or busy games, and, with "Update only when idle", while the user is active.
+pub async fn auto_update(app: &AppHandle) {
+    let (Some(state), Some(launch)) = (
+        app.try_state::<AppState>(),
+        app.try_state::<crate::launch::LaunchState>(),
+    ) else {
+        return;
+    };
+    let on = |key: &str, default: bool| {
+        settings_value(&state.cache, key)
+            .map(|v| v == "true")
+            .unwrap_or(default)
+    };
+    if !on("downloads.autoUpdate", true) {
+        return;
+    }
+    if on("downloads.updateOnlyIdle", false) && crate::disk::idle_secs().is_some_and(|s| s < 600) {
+        tracing::info!("auto-update waits until the computer is idle");
+        return;
+    }
+    let Ok(snapshot) = state.cache.snapshot() else {
+        return;
+    };
+    for g in snapshot
+        .games
+        .iter()
+        .filter(|g| g.state == egs_cache::model::InstallState::UpdateAvailable)
+    {
+        if !on(&format!("game.{}.autoUpdate", g.app_name), true) || launch.is_running(&g.app_name) {
+            continue;
+        }
+        let Ok(Some(install)) = state.cache.game_install(&g.app_name) else {
+            continue;
+        };
+        if install.egl_managed
+            || state
+                .cache
+                .active_download(&g.app_name)
+                .ok()
+                .flatten()
+                .is_some()
+        {
+            continue;
+        }
+        match queue_update(app, &g.app_name).await {
+            Ok(()) => tracing::info!("auto-update queued"),
+            Err(e) => tracing::info!(code = %e.code, "auto-update skipped"),
+        }
+    }
 }
 
 #[tauri::command]
@@ -1124,6 +1187,24 @@ async fn run_job(app: &AppHandle, job: &DownloadJob) -> Result<(), UiError> {
                 "download finished"
             );
             emit_changed(app, "download");
+            let verify_after = settings_value(&state.cache, "downloads.verifyAfterInstall")
+                .is_some_and(|v| v == "true");
+            if job.kind == "install" && verify_after {
+                let (app, name) = (app.clone(), job.app_name.clone());
+                tauri::async_runtime::spawn(async move {
+                    match verify_installed(&app, &name).await {
+                        Ok(r) if !r.problems.is_empty() => {
+                            tracing::warn!(
+                                problems = r.problems.len(),
+                                "verify after install found problems; repairing"
+                            );
+                            let _ = queue_repair(&app, &name).await;
+                        }
+                        Ok(_) => {}
+                        Err(e) => tracing::warn!(error = %e.message, "verify after install failed"),
+                    }
+                });
+            }
         }
         Ok(Outcome::Paused) => {
             state.cache.set_download_state(job.id, "paused", None)?;
@@ -1570,6 +1651,16 @@ pub async fn dev_action(app: AppHandle, spec: String) {
             .await
             .map(|_| "uninstalled".to_owned()),
         "store" => crate::store::dev_check(&app, app_name).await,
+        "account" => crate::account::dev_check(&app).await,
+        "page" => match serde_json::from_str::<crate::auth::EpicPage>(&format!("\"{app_name}\"")) {
+            Ok(page) => {
+                let state = app.state::<AppState>();
+                crate::auth::open_epic_page(app.clone(), state, page)
+                    .await
+                    .map(|_| "opened".to_owned())
+            }
+            Err(_) => Err(err("dev", "unknown page")),
+        },
         "open" => crate::store::dev_open(&app, app_name).await,
         "launch" => crate::launch::launch(&app, app_name, &Default::default())
             .await

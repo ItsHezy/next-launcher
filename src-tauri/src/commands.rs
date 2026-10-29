@@ -204,8 +204,17 @@ pub fn set_setting(
     app: AppHandle,
 ) -> Result<(), UiError> {
     state.cache.set_setting(&key, &value.to_json())?;
-    if key == "downloads.limitMbps" {
-        crate::install::apply_speed_limit(&app);
+    match key.as_str() {
+        "downloads.limitMbps" => crate::install::apply_speed_limit(&app),
+        // Read before logging starts, so it lives in a marker file (applies on restart).
+        "support.debugLogging" => {
+            let marker = state.paths.debug_marker();
+            let _ = match value.to_json() {
+                serde_json::Value::Bool(true) => std::fs::write(&marker, b"on"),
+                _ => std::fs::remove_file(&marker).or(Ok(())),
+            };
+        }
+        _ => {}
     }
     Ok(())
 }

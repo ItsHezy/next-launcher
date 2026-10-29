@@ -99,6 +99,37 @@ pub struct VerifyResponse {
     pub perms: Vec<Permission>,
 }
 
+/// Permission action bits.
+pub const CREATE: u32 = 1;
+pub const READ: u32 = 2;
+pub const UPDATE: u32 = 4;
+pub const DELETE: u32 = 8;
+
+impl VerifyResponse {
+    /// Does the token allow `action` on `resource`? A `*` segment in a granted resource
+    /// matches any one segment; a trailing `*` matches the rest.
+    pub fn allows(&self, resource: &str, action: u32) -> bool {
+        self.perms
+            .iter()
+            .any(|p| p.action & action == action && resource_matches(&p.resource, resource))
+    }
+}
+
+fn resource_matches(granted: &str, wanted: &str) -> bool {
+    let g: Vec<&str> = granted.split(':').collect();
+    let w: Vec<&str> = wanted.split(':').collect();
+    for (i, seg) in g.iter().enumerate() {
+        if *seg == "*" && i == g.len() - 1 {
+            return w.len() >= g.len();
+        }
+        match w.get(i) {
+            Some(x) if *seg == "*" || seg == x => {}
+            _ => return false,
+        }
+    }
+    g.len() == w.len()
+}
+
 /// `GET /account/api/oauth/verify`.
 pub async fn verify(
     client: &Client,
@@ -166,6 +197,44 @@ pub async fn kill_other_sessions(client: &Client, access: &Secret) -> Result<(),
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn permission_matching() {
+        let v = VerifyResponse {
+            account_id: None,
+            display_name: None,
+            expires_in: None,
+            perms: vec![
+                Permission {
+                    resource: "account:public:account".into(),
+                    action: 6,
+                },
+                Permission {
+                    resource: "fulfillment:public:code".into(),
+                    action: 1,
+                },
+                Permission {
+                    resource: "friends:abc:*".into(),
+                    action: 15,
+                },
+                Permission {
+                    resource: "presence:_:abc".into(),
+                    action: 4,
+                },
+            ],
+        };
+        assert!(v.allows("account:public:account", UPDATE));
+        assert!(!v.allows("account:public:account", DELETE));
+        assert!(v.allows("fulfillment:public:code", CREATE));
+        assert!(
+            !v.allows("fulfillment:public:code:x", CREATE),
+            "no implicit children"
+        );
+        assert!(v.allows("friends:abc:blocklist", READ));
+        assert!(!v.allows("friends:other:blocklist", READ));
+        assert!(v.allows("presence:_:abc", UPDATE));
+        assert!(!v.allows("presence:_:abc", READ));
+    }
     use crate::http::test_client;
     use wiremock::matchers::{body_string_contains, header_exists, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};

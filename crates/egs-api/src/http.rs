@@ -23,6 +23,10 @@ pub struct Hosts {
     pub store: String,
     /// Free-games promotions feed.
     pub store_static: String,
+    /// Store REST (wallet summary, product data).
+    pub platform: String,
+    /// Code redemption.
+    pub fulfillment: String,
 }
 
 impl Hosts {
@@ -37,6 +41,8 @@ impl Hosts {
             ecom: "https://ecommerceintegration-public-service-ecomprod02.ol.epicgames.com".into(),
             store: "https://store.epicgames.com".into(),
             store_static: "https://store-site-backend-static-ipv4.ak.epicgames.com".into(),
+            platform: "https://egs-platform-service.store.epicgames.com".into(),
+            fulfillment: "https://fulfillment-public-service-prod.ol.epicgames.com".into(),
         }
     }
 
@@ -52,7 +58,9 @@ impl Hosts {
             eula: b.clone(),
             ecom: b.clone(),
             store: b.clone(),
-            store_static: b,
+            store_static: b.clone(),
+            platform: b.clone(),
+            fulfillment: b,
         }
     }
 }
@@ -67,6 +75,8 @@ pub struct ClientConfig {
     pub max_retries: u32,
     pub base_delay: Duration,
     pub max_delay: Duration,
+    /// Explicit proxy (`http://host:port`); `None` = Windows' own proxy settings.
+    pub proxy: Option<String>,
 }
 
 impl ClientConfig {
@@ -78,6 +88,7 @@ impl ClientConfig {
             timeout: Duration::from_secs(20),
             max_retries: 4,
             base_delay: Duration::from_secs(1),
+            proxy: None,
             max_delay: Duration::from_secs(60),
         }
     }
@@ -107,7 +118,13 @@ impl Client {
             // Ignore "already installed": another crate may have installed one first.
             let _ = rustls::crypto::ring::default_provider().install_default();
         });
-        let http = reqwest::Client::builder()
+        let mut builder = reqwest::Client::builder();
+        if let Some(p) = cfg.proxy.as_deref().filter(|p| !p.trim().is_empty()) {
+            builder = builder.proxy(
+                reqwest::Proxy::all(p.trim()).map_err(|e| ApiError::Invalid(e.to_string()))?,
+            );
+        }
+        let http = builder
             .user_agent(cfg.user_agent.clone())
             .connect_timeout(cfg.connect_timeout)
             .timeout(cfg.timeout)

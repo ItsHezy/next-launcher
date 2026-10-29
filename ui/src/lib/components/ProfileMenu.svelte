@@ -1,5 +1,6 @@
 <script lang="ts">
   import { menuKeys } from '../actions';
+  import { account } from '../state/account.svelte';
   import { auth } from '../state/auth.svelte';
   import { router, type SettingsSection } from '../state/router.svelte';
   import { comingSoon, ui } from '../state/ui.svelte';
@@ -7,12 +8,16 @@
   import Avatar from './Avatar.svelte';
   import Icon from './Icon.svelte';
 
-  let status = $state<'online' | 'away' | 'invisible'>('online');
   const name = $derived(auth.displayName || 'Epic account');
 
   function open(section: SettingsSection) {
     ui.close();
     router.go('settings', section);
+  }
+  function redeem() {
+    ui.close();
+    if (account.caps?.redeem) ui.dialog = { kind: 'account', what: 'redeem' };
+    else void auth.openEpicPage('redeem');
   }
 
   interface Item {
@@ -23,11 +28,21 @@
     danger?: boolean;
   }
   const groups: Item[][] = [
-    [{ icon: 'trophy', label: 'Achievements', run: () => comingSoon('Achievements', 7) }],
+    [
+      {
+        icon: 'trophy',
+        label: 'Achievements',
+        sub: 'Per game; a list is coming',
+        run: () => {
+          ui.close();
+          comingSoon('Achievements', 9);
+        },
+      },
+    ],
     [
       { icon: 'user', label: 'Account', sub: 'Profile, security, connections', run: () => open('account') },
       { icon: 'gift', label: 'Gifts & coupons', run: () => open('wallet') },
-      { icon: 'ticket', label: 'Redeem code', run: () => open('wallet') },
+      { icon: 'ticket', label: 'Redeem code', run: redeem },
     ],
     [
       { icon: 'gear', label: 'Settings', run: () => open('general') },
@@ -53,15 +68,12 @@
     <Avatar {name} size={44} />
     <div class="who">
       <div class="name">{name}</div>
-      <label class="status">
-        <span class="dot {status}" aria-hidden="true"></span>
-        <span class="sr-only">Online status</span>
-        <select bind:value={status} onchange={() => comingSoon('Online status', 7)}>
-          <option value="online">Online</option>
-          <option value="away">Away</option>
-          <option value="invisible">Invisible</option>
-        </select>
-      </label>
+      <!-- Next Launcher doesn't connect to Epic's chat/presence service (ADR 0011), so
+           friends see this account as offline while it's in use. Say so plainly. -->
+      <span class="status" title="Online status needs Epic's chat connection, which Next Launcher doesn't use yet">
+        <span class="dot invisible" aria-hidden="true"></span>
+        <span>Shown offline to friends</span>
+      </span>
     </div>
   </div>
 
@@ -96,44 +108,18 @@
     font-size: 15px;
   }
   .status {
-    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    margin-top: 2px;
+    font-size: 13px;
     color: var(--text-2);
-  }
-  .status select {
-    appearance: none;
-    background: transparent;
-    border: 0;
-    color: var(--text-2);
-    min-height: var(--hit);
-    padding: 0 18px 0 0;
-    cursor: pointer;
-    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
-      linear-gradient(135deg, currentColor 50%, transparent 50%);
-    background-position:
-      calc(100% - 7px) 55%,
-      calc(100% - 3px) 55%;
-    background-size: 4px 4px;
-    background-repeat: no-repeat;
-  }
-  .status select:focus-visible {
-    outline: 2px solid var(--accent-text);
-    border-radius: 6px;
-  }
-  .status option {
-    background: var(--surface);
-    color: var(--text);
   }
   .dot {
     width: 9px;
     height: 9px;
     border-radius: 50%;
     background: var(--success);
-  }
-  .dot.away {
-    background: var(--warning);
   }
   .dot.invisible {
     background: transparent;

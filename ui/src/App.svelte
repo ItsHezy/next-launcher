@@ -93,6 +93,10 @@
     {#await import('./lib/components/LaunchPrompt.svelte') then { default: LaunchPrompt }}
       <LaunchPrompt appName={ui.dialog.appName} code={ui.dialog.code} message={ui.dialog.message} />
     {/await}
+  {:else if ui.dialog?.kind === 'account'}
+    {#await import('./lib/components/AccountDialog.svelte') then { default: AccountDialog }}
+      <AccountDialog what={ui.dialog.what} />
+    {/await}
   {:else if ui.dialog?.kind === 'move'}
     {#await import('./lib/components/MoveDialog.svelte') then { default: MoveDialog }}
       <MoveDialog appName={ui.dialog.appName} />

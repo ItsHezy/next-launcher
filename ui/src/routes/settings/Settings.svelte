@@ -1,6 +1,8 @@
 <script lang="ts">
   import Icon from '../../lib/components/Icon.svelte';
   import WindowControls from '../../lib/components/WindowControls.svelte';
+  import { account } from '../../lib/state/account.svelte';
+  import { auth } from '../../lib/state/auth.svelte';
   import { router } from '../../lib/state/router.svelte';
   import AboutDiagnostics from './AboutDiagnostics.svelte';
   import AccountCard from './AccountCard.svelte';
@@ -13,6 +15,14 @@
   let content = $state<HTMLElement>();
 
   const current = $derived(ALL_SECTIONS.find((s) => s.id === router.section) ?? ALL_SECTIONS[0]!);
+
+  // Live values for the section on screen (Rust caches them for a few minutes).
+  $effect(() => {
+    const id = current.id;
+    if (id === 'account' && auth.signedIn) void account.loadDetails();
+    else if (id === 'wallet' && auth.signedIn) void account.loadWallet();
+    else if (id === 'general') void account.loadHidden();
+  });
 
   const results = $derived.by(() => {
     const q = query.trim().toLowerCase();

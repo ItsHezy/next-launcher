@@ -34,6 +34,9 @@ opened signed in from the stored session alone. No extra sign-in is ever needed.
 | 21 | Help & support, contact support, legal pages | epicgames.com help/legal pages | legal pages don't need sign-in |
 | 22 | "Corrective actions" Epic may demand (accept new privacy policy, confirm birth date, etc.) | `continuationUrl` from the token error | opens automatically when Epic asks |
 
+**Phase 7 (2026-10-29):** page paths verified and corrected in [account.md](account.md)
+"Verified Epic pages". Row 9 (active sessions, sign-in history): no such page, rows hidden.
+
 ## B. API exists, permission resource present (action bits checked in Phase 7)
 
 The Phase 2 sign-in showed 150 permissions on the launcher token, including resources for
@@ -42,12 +45,12 @@ checks the exact resource + action for each row below; any row Epic denies falls
 
 | Feature | API | Fallback page |
 |---|---|---|
-| Change display name / communication language | `PUT /account/api/public/account/<id>` | `/account/personal` |
-| Sign out of all devices | `DELETE /account/api/oauth/sessions/kill?killType=OTHERS` | `/account/password` |
-| Wallet balance, Epic Rewards, coupon count | `egs-platform-service .../account/wallet` | wallet button shows no balance |
-| Redeem a code | `fulfillment .../codes/<code>` | store `/redeem` |
-| Achievements | store GraphQL `Achievement` / `PlayerAchievement` | store achievements page |
-| Store "Featured" row | not found yet | `searchStore` sorted by date |
+| Change display name / communication language | `PUT /account/api/public/account/<id>` | **API (permitted)** |
+| Sign out of all devices | `DELETE /account/api/oauth/sessions/kill?killType=OTHERS` | **web** `/account/password` (not permitted) |
+| Wallet balance, Epic Rewards, coupon count | `egs-platform-service .../account/wallet` | **API (permitted)** |
+| Redeem a code | `fulfillment .../codes/<code>` | **API (permitted)** |
+| Achievements | store GraphQL `Achievement` / `PlayerAchievement` | not built; no global web page exists (Phase 9) |
+| Store "Featured" row | not found | overview of the other store rows (Phase 6) |
 
 ## C. Needs a persistent connection, not REST
 

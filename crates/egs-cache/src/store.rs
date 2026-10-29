@@ -109,4 +109,28 @@ mod tests {
         );
         assert_eq!(c.signed_in_country().unwrap(), None);
     }
+
+    #[test]
+    fn hidden_games_leave_the_library_and_come_back() {
+        let c = crate::sync::tests_support::cache_with_game("A", "1");
+        c.set_hidden("A", true).unwrap();
+        assert!(c
+            .snapshot()
+            .unwrap()
+            .games
+            .iter()
+            .all(|g| g.app_name != "A"));
+        assert_eq!(
+            c.hidden_games().unwrap(),
+            [("A".to_owned(), "A".to_owned())]
+        );
+        c.set_hidden("A", false).unwrap();
+        assert!(c.hidden_games().unwrap().is_empty());
+        assert!(c
+            .snapshot()
+            .unwrap()
+            .games
+            .iter()
+            .any(|g| g.app_name == "A"));
+    }
 }

@@ -320,20 +320,25 @@ async fn after_sign_in(app: AppHandle, acct: AccountSummary, epoch: u64) {
         crate::install::kick(&app);
     }
 
-    // Phase 2 verification: which Phase 7 features the launcher token may use.
-    // Logs resource names only (no tokens, no account ids).
+    // What this token may do (Phase 7 rows use the API only where Epic allows it).
     match egs_api::oauth::verify(&api, &access, true).await {
         Ok(v) => {
-            let has = |needle: &str| v.perms.iter().any(|p| p.resource.contains(needle));
+            let caps = crate::account::Capabilities::from_verify(&v, &acct.account_id);
+            if let Some(a) = app.try_state::<crate::account::AccountState>() {
+                if let Ok(mut c) = a.caps.lock() {
+                    *c = caps;
+                }
+            }
             tracing::info!(
                 perms = v.perms.len(),
-                account_update = has("account:public:account"),
-                token_kill = has("account:token"),
-                fulfillment = has("fulfillment"),
-                reward = has("reward"),
-                library = has("library"),
+                update_account = caps.update_account,
+                connections = caps.connections,
+                redeem = caps.redeem,
+                wallet = caps.wallet,
+                sign_out_others = caps.sign_out_others,
                 "launcher token permissions"
             );
+            crate::account::refresh_wallet(&app).await;
         }
         Err(e) => tracing::warn!(error = %e, "verify failed"),
     }
@@ -532,6 +537,9 @@ pub async fn sign_out(
         auth.session.forget(&id)?;
         state.cache.mark_signed_out(&id)?;
     }
+    if let Some(a) = app.try_state::<crate::account::AccountState>() {
+        a.clear();
+    }
     for label in [LOGIN_WINDOW, WEB_WINDOW] {
         if let Some(w) = app.get_webview_window(label) {
             let _ = w.close();
@@ -561,12 +569,20 @@ pub enum EpicPage {
     AccountPersonal,
     Password,
     Connections,
-    Privacy,
     EmailPreferences,
     Transactions,
     PaymentMethods,
     Wallet,
     Redeem,
+    Gifts,
+    Rewards,
+    VbucksCard,
+    Support,
+    Terms,
+    PrivacyPolicy,
+    RefundPolicy,
+    PublisherIndex,
+    Eula,
 }
 
 impl EpicPage {
@@ -575,13 +591,34 @@ impl EpicPage {
             Self::AccountPersonal => "https://accounts.epicgames.com/account/personal",
             Self::Password => "https://accounts.epicgames.com/account/password",
             Self::Connections => "https://accounts.epicgames.com/account/connections",
-            Self::Privacy => "https://accounts.epicgames.com/account/privacy",
-            Self::EmailPreferences => "https://accounts.epicgames.com/account/email-preferences",
+            Self::EmailPreferences => "https://accounts.epicgames.com/account/messaging",
             Self::Transactions => "https://accounts.epicgames.com/account/transactions",
-            Self::PaymentMethods => "https://accounts.epicgames.com/account/payment-management",
+            Self::PaymentMethods => "https://accounts.epicgames.com/account/payments",
             Self::Wallet => "https://store.epicgames.com/wallet",
-            Self::Redeem => "https://store.epicgames.com/redeem",
+            Self::Redeem => "https://accounts.epicgames.com/account/code-redemption",
+            Self::Gifts => "https://accounts.epicgames.com/account/transactions/gifts",
+            Self::Rewards => "https://accounts.epicgames.com/account/rewards",
+            Self::VbucksCard => "https://www.fortnite.com/vbuckscard",
+            Self::Support => "https://www.epicgames.com/help/en-US/",
+            Self::Terms => "https://legal.epicgames.com/epicgames/tos",
+            Self::PrivacyPolicy => "https://legal.epicgames.com/epicgames/privacy-policy",
+            Self::RefundPolicy => "https://legal.epicgames.com/store/refund-policy",
+            Self::PublisherIndex => "https://store.epicgames.com/publisher-index",
+            Self::Eula => "https://legal.epicgames.com/store/eula",
         }
+    }
+
+    /// Public pages open as they are; the rest go through the exchange-code bridge.
+    fn needs_sign_in(self) -> bool {
+        !matches!(
+            self,
+            Self::Support
+                | Self::Terms
+                | Self::PrivacyPolicy
+                | Self::RefundPolicy
+                | Self::PublisherIndex
+                | Self::Eula
+        )
     }
 }
 
@@ -614,7 +651,15 @@ fn open_web_window(app: &AppHandle, url: &str, profile: std::path::PathBuf) -> R
         .min_inner_size(640.0, 480.0)
         .center()
         .data_directory(profile)
-        .on_navigation(|u| u.scheme() == "https")
+        .on_navigation(|u| {
+            // Host and path only: queries can carry exchange codes.
+            tracing::debug!(
+                host = u.host_str().unwrap_or(""),
+                path = u.path(),
+                "web window navigation"
+            );
+            u.scheme() == "https"
+        })
         .build()
         .map_err(|e| {
             tracing::error!(error = %e, "could not open the Epic web window");
@@ -626,6 +671,10 @@ fn open_web_window(app: &AppHandle, url: &str, profile: std::path::PathBuf) -> R
         w.on_window_event(move |e| {
             if matches!(e, tauri::WindowEvent::Destroyed) {
                 crate::library::sync_soon(&handle);
+                let h = handle.clone();
+                tauri::async_runtime::spawn(
+                    async move { crate::account::refresh_wallet(&h).await },
+                );
             }
         });
     }
@@ -658,18 +707,15 @@ pub(crate) async fn open_signed_in(app: &AppHandle, url: &str) -> Result<(), UiE
 #[specta::specta]
 pub async fn open_epic_page(
     app: AppHandle,
-    auth: State<'_, AuthState>,
     state: State<'_, AppState>,
     page: EpicPage,
 ) -> Result<(), UiError> {
-    let code = auth.session.exchange_code().await?;
-    let url = format!(
-        "https://www.epicgames.com/id/exchange?exchangeCode={}&redirectUrl={}",
-        code.expose(),
-        encode(page.url())
-    );
-    tracing::info!(?page, "opening signed-in Epic page");
-    open_web_window(&app, &url, state.paths.webview_web.clone())
+    tracing::info!(?page, "opening Epic page");
+    if page.needs_sign_in() {
+        open_signed_in(&app, page.url()).await
+    } else {
+        open_web_window(&app, page.url(), state.paths.webview_web.clone())
+    }
 }
 
 /// Open the page Epic asked for in a corrective action (e.g. accept a new policy).

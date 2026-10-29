@@ -80,25 +80,66 @@ All `/account/*` routes redirect to login when signed out, even made-up ones, so
 which page paths exist can only be confirmed once signed in (Phase 7). Paths below are
 **[GUESS]** unless marked.
 
-## Settings → Account: source of each row
+## Phase 7 result (2026-10-29, owner's account): what the launcher token may do
 
-| Row | Read | Change | Notes |
-|---|---|---|---|
-| Profile card (name, email, "signed in") | API account info | — | initials avatar until avatar API verified |
-| Display name | API | API if permitted, else web `/account/personal` | honour change cooldown |
-| Email | API | web `/account/personal` | sensitive |
-| Country | API | web `/account/personal` | Epic restricts country changes |
-| Communication language | API `preferredLanguage` | API if permitted, else web `/account/personal` | |
-| Password | — | web `/account/password` | |
-| Two-factor authentication | API `tfaEnabled` | web `/account/password` | |
-| Active sessions | — | web, if Epic has such a page (verify) | hide the row if no page exists |
-| Sign-in history | — | web, if Epic has such a page (verify) | hide the row if no page exists |
-| Connected accounts | API externalAuths | web `/account/connections` | |
-| Privacy toggles | — | web `/account/privacy` | no Epic-account privacy API found (GlobalService privacy is Fortnite-scoped) |
-| Email / marketing preferences | — | web `/account/email-preferences` | |
-| Download my data | — | web `/account/privacy` | |
-| Sign out of all devices | — | API `sessions/kill?killType=OTHERS` if permitted, else web `/account/password` | confirmation dialog first |
-| Delete account | — | **web only** `/account/personal` | never an API call, irreversible, Epic's own confirmation flow |
+From `verify?includePerms=true` (bits 1 create, 2 read, 4 update, 8 delete) **[OBS]**:
 
-The same split applies to Wallet & rewards rows: see [wallet-and-redeem.md](wallet-and-redeem.md).
-The full list of web-only features is in [web-only.md](web-only.md).
+| Resource | Action | Used for |
+|---|---|---|
+| `account:public:account` | 6 (read, update) | display name and communication language **in-app** |
+| `account:public:account:externalAuths` | 7 | connected-accounts list |
+| `fulfillment:public:code` | 1 (create) | redeem a code **in-app** |
+| `payment:public:<id>:wallet`, `reward:public:<id>:reward-accounts` | 2 (read) | wallet summary |
+| `account:token:otherSessionsWithSameSourceForAccount` | 8 | *not* "all devices": `killType=OTHERS` needs `otherSessionsForAccount`, which the launcher doesn't get, so that row opens Epic's page |
+| `presence:_:<id>` | 4 | presence needs a chat (XMPP) connection first; not used (ADR 0011) |
+
+The app derives these capabilities at every sign-in (`account::Capabilities`), with exact
+resource + action matching; rows fall back to Epic's page when a capability is missing.
+
+## Verified Epic pages (2026-10-29, in the signed-in web window)
+
+`accounts.epicgames.com` was redesigned: a side menu with *Account* (Settings, Linked accounts,
+Communication preferences, Password and security, Legal history), *Payment and rewards*
+(Payment settings, Transactions, Subscriptions, In-game currency, Epic rewards, Redeem code)
+and *Parental controls*. **[OBS]** Paths checked by title, not content:
+
+| Page | Path | Result |
+|---|---|---|
+| Settings (name, email, country, privacy info, data download, delete account) | `/account/personal` | ✅ "Settings" |
+| Linked accounts | `/account/connections` | ✅ |
+| Communication preferences (email) | `/account/messaging` | ✅ (`/account/email-preferences` is 404) |
+| Password and security (password, 2FA, sign out) | `/account/password` | ✅; no sessions or sign-in history on it |
+| Purchases | `/account/transactions` → `/transactions/purchases` | ✅ |
+| Gifts | `/account/transactions/gifts` | ✅ |
+| Payment settings | `/account/payments` | ✅ (`/account/payment-management` is 404) |
+| Epic rewards | `/account/rewards` | ✅ |
+| Redeem code | `/account/code-redemption` | ✅ |
+| Legal history | `/account/eula-history` | ✅ (not linked from the app yet) |
+| Privacy | `/account/privacy` | ❌ 404: privacy lives on the Settings page |
+| Coupons | `/account/coupons`, `/account/transactions/coupons` | ❌ 404: coupons only appear at checkout |
+| Active sessions, sign-in history | — | ❌ no such page: **rows hidden** |
+| Store wishlist, cart, gifts inbox, publisher index | `store.epicgames.com/{wishlist,cart,gifts,publisher-index}` | ✅ |
+| Achievements | `store.epicgames.com/achievements` | ❌ 404: achievements are per game on product pages |
+| V-Bucks card | `www.fortnite.com/vbuckscard` | ✅ |
+| Legal | `legal.epicgames.com/epicgames/tos`, `/epicgames/privacy-policy`, `/store/refund-policy`, `/store/eula` | ✅ public |
+| Help | `www.epicgames.com/help/en-US/` | ✅ public |
+
+Note: with a DevTools port open, `store.epicgames.com` answered every navigation with its
+"Just a moment…" bot check; `accounts.epicgames.com` did not. Without the debug port (normal
+use) store pages load. We never try to get past that check.
+
+## Settings → Account: source of each row (as built)
+
+| Row | Read | Change |
+|---|---|---|
+| Profile card, display name, email, country | API account info | name: **API** (dialog, 3–16 chars, Epic's cooldown honoured via `canUpdateDisplayName`); email, country: web `/account/personal` |
+| Communication language | API `preferredLanguage` | **API** (dialog) |
+| Password | — | web `/account/password` |
+| Two-factor authentication | API `tfaEnabled` | web `/account/password` |
+| Connected accounts (PlayStation, Xbox, Nintendo, Steam, Discord + "Other") | API externalAuths | web `/account/connections` |
+| Privacy & your data, delete account | — | web `/account/personal` |
+| Communication preferences | — | web `/account/messaging` |
+| Sign out of all devices | — | web `/account/password` (no permission for `OTHERS`) |
+| Active sessions, sign-in history | — | hidden (no page exists) |
+
+The same split for Wallet & rewards is in [wallet-and-redeem.md](wallet-and-redeem.md).

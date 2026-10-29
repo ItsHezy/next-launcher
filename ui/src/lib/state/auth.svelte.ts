@@ -5,6 +5,7 @@ import { boot } from '../boot';
 import { commands, events, type AuthStatus_Serialize, type EpicPage } from '../bindings';
 import { library } from './library.svelte';
 import { ui } from './ui.svelte';
+import { account } from './account.svelte';
 
 export type AuthStatus = AuthStatus_Serialize;
 
@@ -32,8 +33,9 @@ class AuthState {
         country: s.country ?? library.account?.country ?? null,
         signedIn: true,
       };
-    } else if (s.state === 'signedOut' && library.account) {
-      library.account = { ...library.account, signedIn: false };
+    } else if (s.state === 'signedOut') {
+      if (library.account) library.account = { ...library.account, signedIn: false };
+      account.reset();
     }
   }
 
@@ -54,7 +56,7 @@ class AuthState {
   }
 
   async openEpicPage(page: EpicPage) {
-    if (!this.signedIn) {
+    if (!this.signedIn && !PUBLIC_PAGES.has(page)) {
       ui.toast('Sign in first to open your Epic account pages.');
       return;
     }
@@ -67,5 +69,8 @@ class AuthState {
     if (res.status === 'error') ui.toast(res.error.message);
   }
 }
+
+/** Epic pages that need no sign-in (help and legal). */
+const PUBLIC_PAGES = new Set<EpicPage>(['support', 'terms', 'privacyPolicy', 'refundPolicy', 'publisherIndex', 'eula']);
 
 export const auth = new AuthState();

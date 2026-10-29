@@ -95,13 +95,25 @@ How each fact was obtained. Raw downloads and probe output live in `research/ref
 | L27 | Library catalog item ids differ from the store offer's `items[].id` for the same game; namespaces match | ABZÛ comparison |
 | L28 | `store.epicgames.com/<lang>/p/<slug>` and `/purchase?offers=1-<ns>-<offer>` open signed in through the exchange-code bridge; the checkout shows Epic's own confirm button | screenshots in `.dev-data/shots/` (not committed) |
 
+## Phase 7 live verification (2026-10-29, owner's account; nothing on the account was changed)
+
+| # | Finding | Evidence |
+|---|---|---|
+| L29 | Launcher token: `account:public:account` 6, `externalAuths` 7, `fulfillment:public:code` 1, wallet + reward-accounts read 2, `otherSessionsWithSameSourceForAccount` 8 (not `otherSessionsForAccount`), `presence:_:<id>` 4 | verify perms, resource names with the account id masked |
+| L30 | Wallet summary works with the launcher token: `EpicWalletUnsupported` in the owner's region, `EpicRewardsSupported`, coupon count present | app log (type names only) |
+| L31 | Account info + externalAuths: 2FA on, 4 linked accounts (`lego`, `nintendo`, `steam`, `ubisoft`) | app log (kinds only) |
+| L32 | Redesigned `accounts.epicgames.com`: `/personal`, `/connections`, `/messaging`, `/password`, `/payments`, `/rewards`, `/code-redemption`, `/eula-history`, `/transactions/{purchases,gifts}` exist; `/privacy`, `/payment-management`, `/email-preferences`, `/coupons` are 404 | page titles via the web window |
+| L33 | No active-sessions or sign-in-history page; Password and security has password, 2FA and sign-out | page keywords |
+| L34 | `store.epicgames.com/achievements` is 404; `publisher-index`, `gifts` exist; legal pages live on `legal.epicgames.com` | screenshots, titles |
+| L35 | With a DevTools port open, the store answers navigations with "Just a moment…"; the accounts site doesn't | CDP test runs (not used in normal operation) |
+
 ## Open questions (carried into phases)
 
 | Question | Phase |
 |---|---|
-| exact action bits for account update, kill OTHERS, wallet, fulfillment (resources present, L5) | 7 |
+| exact action bits for account update, kill OTHERS, wallet, fulfillment | done (L29) |
 | catalog bulk max ids per request (25 works; larger untested) | 6 |
 | a small free test game the owner owns: *while True: learn()* chosen by the owner (Phase 4) | done |
 | store "Featured" source (discover v2 `platform` value) | open; Featured = overview rows |
-| achievements GraphQL on store.epicgames.com with bearer | 7 |
-| presence connection cost vs idle budget | 7 |
+| achievements GraphQL on store.epicgames.com with bearer | 9 |
+| presence connection cost vs idle budget | open (not built, ADR 0011) |

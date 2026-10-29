@@ -109,6 +109,10 @@ fn set_status(app: &AppHandle, status: SyncStatus) {
     let _ = SyncStatusChanged(status).emit(app);
 }
 
+pub(crate) fn notify_changed(app: &AppHandle, reason: &str) {
+    changed(app, reason);
+}
+
 fn changed(app: &AppHandle, reason: &str) {
     let _ = LibraryChanged {
         reason: reason.to_owned(),
@@ -158,14 +162,17 @@ async fn run(app: AppHandle) {
         );
         let result = sync_once(&app).await;
         match result {
-            Ok(()) => set_status(
-                &app,
-                SyncStatus {
-                    syncing: false,
-                    error: None,
-                    last_sync: Some(now_unix() as f64),
-                },
-            ),
+            Ok(()) => {
+                set_status(
+                    &app,
+                    SyncStatus {
+                        syncing: false,
+                        error: None,
+                        last_sync: Some(now_unix() as f64),
+                    },
+                );
+                crate::install::auto_update(&app).await;
+            }
             Err(e) => {
                 tracing::warn!(error = %e.message, "library sync failed");
                 set_status(
