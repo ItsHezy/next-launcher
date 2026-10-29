@@ -277,6 +277,15 @@ mod tests {
             m.install_tags().len(),
             m.is_encrypted()
         );
+        println!(
+            "launch {:?} {:?}; prereq {:?} {:?} {:?}; uninstall action {:?}",
+            m.meta.launch_exe,
+            m.meta.launch_command,
+            m.meta.prereq_name,
+            m.meta.prereq_path,
+            m.meta.prereq_args,
+            m.meta.uninstall_action_path
+        );
         assert!(!m.files.is_empty());
         let index = m.chunk_index();
         assert!(m

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { num } from '../boot';
   import { library } from '../state/library.svelte';
+  import * as actions from '../gameActions';
   import { router } from '../state/router.svelte';
-  import { comingSoon } from '../state/ui.svelte';
   import Cover from './Cover.svelte';
   import DownloadCard from './DownloadCard.svelte';
   import Icon from './Icon.svelte';
@@ -26,13 +26,16 @@
         <li>
           <button
             class="ql-item"
-            onclick={() =>
-              g.state === 'notInstalled' ? comingSoon('Installing', 4) : comingSoon('Launching games', 5)}
+            onclick={() => void actions.play(g)}
           >
             <span class="thumb"><Cover game={g} kind="thumb" /></span>
             <span class="txt">
               <span class="name">{g.title}</span>
-              {#if g.state === 'installed'}
+              {#if library.running.has(g.appName)}
+                <span class="st status-active">Playing</span>
+              {:else if library.starting.has(g.appName)}
+                <span class="st status-active">Starting…</span>
+              {:else if g.state === 'installed'}
                 <span class="st status-ready">Ready</span>
               {:else if g.state === 'updateAvailable'}
                 <span class="st status-update">Update</span>

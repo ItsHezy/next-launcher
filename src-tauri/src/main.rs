@@ -6,6 +6,7 @@ mod console;
 mod disk;
 mod import;
 mod install;
+mod launch;
 mod library;
 mod logging;
 mod paths;
@@ -112,13 +113,16 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             install::verify_game,
             install::repair_game,
             install::uninstall_game,
+            launch::launch_game,
+            launch::running_games,
         ])
         .events(tauri_specta::collect_events![
             auth::AuthChanged,
             library::LibraryChanged,
             library::SyncStatusChanged,
             install::DownloadProgress,
-            install::MoveProgress
+            install::MoveProgress,
+            launch::GameRunning
         ])
 }
 
@@ -282,6 +286,7 @@ fn main() {
             app.manage(auth::AuthState::new(api_client()?, boot.auth));
             app.manage(library::LibraryState::default());
             app.manage(install::DownloadsState::new(dev_install_root.clone()));
+            app.manage(launch::LaunchState::default());
             install::apply_speed_limit(app.handle());
 
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
@@ -305,11 +310,18 @@ fn main() {
             });
             Ok(())
         })
-        .run(tauri::generate_context!());
+        .build(tauri::generate_context!());
 
-    if let Err(e) = result {
-        tracing::error!(error = %e, "app exited with an error");
-        eprintln!("Next Launcher failed to start: {e}");
+    match result {
+        Ok(app) => app.run(|handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                launch::on_exit(handle);
+            }
+        }),
+        Err(e) => {
+            tracing::error!(error = %e, "app exited with an error");
+            eprintln!("Next Launcher failed to start: {e}");
+        }
     }
 }
 

@@ -8,6 +8,7 @@ mod downloads;
 mod migrations;
 mod mock;
 pub mod model;
+mod play;
 mod sync;
 
 use std::collections::BTreeMap;
@@ -32,6 +33,8 @@ pub enum Error {
     SchemaTooNew { found: u32, supported: u32 },
     #[error("database lock poisoned")]
     Poisoned,
+    #[error("no system randomness: {0}")]
+    Random(String),
 }
 
 pub struct Cache {

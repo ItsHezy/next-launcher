@@ -18,6 +18,7 @@ egs-auth = { path = "../crates/egs-auth" }
 egs-import = { path = "../crates/egs-import" }
 egs-manifest = { path = "../crates/egs-manifest" }
 egs-download = { path = "../crates/egs-download" }
+egs-launch = { path = "../crates/egs-launch" }
 tokio = { version = "1", features = ["rt", "time", "sync"] }
 tauri = { version = "2.12", features = [] }
 tauri-plugin-single-instance = "2.5"

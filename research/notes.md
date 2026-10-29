@@ -76,6 +76,15 @@ How each fact was obtained. Raw downloads and probe output live in `research/ref
 | L18 | Verify catches a one-byte change in place (size unchanged) via file SHA-1; repair fetched only its 5 chunks | verify / repair / verify log |
 | L19 | Resume after a forced kill skips files already renamed into place (141/153) | restart log `skipped=141` |
 
+## Phase 5 live verification (2026-10-29, owner's account, test game only)
+
+| # | Finding | Evidence |
+|---|---|---|
+| L20 | `GET /account/api/oauth/exchange` right before start + EGL argument order starts *while True: learn()* (Unity); it ignores the auth args | `game started ... offline=false`, game window up |
+| L21 | Playtime `PUT .../playtime/account/<id>` with `startSegment`/`endSegment` true → 204; the next `playtime/all` total grew by the session (14,110 → 14,129 s after an 18 s session) | `playtime reported`, DB before/after sync |
+| L22 | Owned installable games: 5 of 38 need an ownership token, 1 can't run offline, 2 have `AdditionalCommandLine` | catalog `customAttributes`, counts only |
+| L23 | The one third-party title uses `ThirdPartyManagedProvider: UbisoftConnect` and `GameID` | catalog `customAttributes` |
+
 ## Open questions (carried into phases)
 
 | Question | Phase |

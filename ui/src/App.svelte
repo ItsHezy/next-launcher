@@ -89,6 +89,10 @@
     {#await import('./lib/components/UninstallDialog.svelte') then { default: UninstallDialog }}
       <UninstallDialog appName={ui.dialog.appName} />
     {/await}
+  {:else if ui.dialog?.kind === 'launch'}
+    {#await import('./lib/components/LaunchPrompt.svelte') then { default: LaunchPrompt }}
+      <LaunchPrompt appName={ui.dialog.appName} code={ui.dialog.code} message={ui.dialog.message} />
+    {/await}
   {:else if ui.dialog?.kind === 'move'}
     {#await import('./lib/components/MoveDialog.svelte') then { default: MoveDialog }}
       <MoveDialog appName={ui.dialog.appName} />

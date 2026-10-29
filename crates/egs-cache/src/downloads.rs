@@ -36,6 +36,8 @@ pub struct GameInstall {
     pub needs_verify: bool,
     pub owner: Option<String>,
     pub meta_json: Option<String>,
+    /// `releaseInfo` app id (playtime reports).
+    pub artifact_id: Option<String>,
 }
 
 fn tags_from(json: Option<String>) -> Vec<String> {
@@ -49,7 +51,7 @@ impl Cache {
         Ok(conn
             .query_row(
                 "SELECT app_name, namespace, catalog_item_id, title, install_state, version, latest_version,
-                        install_path, install_tags, egl_managed, needs_verify, owner, meta_json
+                        install_path, install_tags, egl_managed, needs_verify, owner, meta_json, artifact_id
                  FROM games WHERE app_name = ?1",
                 params![app_name],
                 |r| {
@@ -67,6 +69,7 @@ impl Cache {
                         needs_verify: r.get(10)?,
                         owner: r.get(11)?,
                         meta_json: r.get(12)?,
+                        artifact_id: r.get(13)?,
                     })
                 },
             )

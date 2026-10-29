@@ -44,12 +44,15 @@ export const commands = {
 	verifyGame: (appName: string) => typedError<VerifyResult, UiError>(__TAURI_INVOKE("verify_game", { appName })),
 	repairGame: (appName: string) => typedError<null, UiError>(__TAURI_INVOKE("repair_game", { appName })),
 	uninstallGame: (appName: string, options: UninstallOptions) => typedError<null, UiError>(__TAURI_INVOKE("uninstall_game", { appName, options })),
+	launchGame: (appName: string, options: LaunchOptions_Deserialize) => typedError<null, UiError>(__TAURI_INVOKE("launch_game", { appName, options })),
+	runningGames: () => __TAURI_INVOKE<string[]>("running_games"),
 };
 
 /** Events */
 export const events = {
 	authChanged: makeEvent<AuthChanged_Serialize, AuthChanged_Deserialize>("auth-changed"),
 	downloadProgress: makeEvent<DownloadProgress, DownloadProgress>("download-progress"),
+	gameRunning: makeEvent<GameRunning, GameRunning>("game-running"),
 	libraryChanged: makeEvent<LibraryChanged, LibraryChanged>("library-changed"),
 	moveProgress: makeEvent<MoveProgress, MoveProgress>("move-progress"),
 	syncStatusChanged: makeEvent<SyncStatusChanged_Serialize, SyncStatusChanged_Deserialize>("sync-status-changed"),
@@ -211,6 +214,12 @@ export type GameRow_Serialize = {
 	thirdParty: string | null,
 };
 
+/**  A game started or stopped. */
+export type GameRunning = {
+	appName: string,
+	running: boolean,
+};
+
 export type ImportCandidate = {
 	appName: string,
 	title: string,
@@ -256,6 +265,22 @@ export type InstallPreview_Serialize = {
 };
 
 export type InstallState = "notInstalled" | "installed" | "updateAvailable" | "installing";
+
+export type LaunchOptions = LaunchOptions_Serialize | LaunchOptions_Deserialize;
+
+export type LaunchOptions_Deserialize = {
+	/**  Start without contacting Epic (no exchange code, no ownership token). */
+	offline: boolean,
+	/**  Answer to the prerequisites question: `run` or `skip`. */
+	prereq?: string | null,
+};
+
+export type LaunchOptions_Serialize = {
+	/**  Start without contacting Epic (no exchange code, no ownership token). */
+	offline: boolean,
+	/**  Answer to the prerequisites question: `run` or `skip`. */
+	prereq: string | null,
+};
 
 /**  Something in the library changed; the UI re-reads the snapshot and merges it. */
 export type LibraryChanged = {

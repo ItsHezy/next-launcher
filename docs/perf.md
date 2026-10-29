@@ -8,6 +8,25 @@ AMD Ryzen 5 5600X (6C/12T), 32 GB RAM, NVMe SSD, RTX 3060 Ti, 200 Hz display, Wi
 10.0.26200, WebView2 runtime 156.0.4314.50. That's upper mid-range; numbers on a true mid-range PC
 will be somewhat higher.
 
+## Phase 5 (2026-10-29): launch
+
+| Metric | Budget | Measured |
+|---|---|---|
+| Warm start, standard bench, median | ≤ 400 ms | **431 ms** (7 runs), **446 ms** (9 runs) ❌ see below |
+| Cold start, standard bench, median | ≤ 1.0 s | **447–448 ms** ✅ |
+| Idle RAM, signed in, nothing running | ≤ 150 MB | **105.9 MB** ✅ |
+| Idle CPU | ~0 % | **0.03 %** ✅ |
+| Installer (NSIS) | ≤ 15 MB | **3.14 MiB** ✅ (exe 8.12 MiB) |
+| Initial / total JS (gz) | 80 / 250 KB | 36.3 / 55.0 KB ✅ |
+| Launch request → game process started (online: exchange code, build info, manifest, spawn) | | 300–330 ms (3 runs) |
+| Game closed → "Playing" cleared, playtime saved and reported | | ≤ 2 s poll + ~0.1 s PUT |
+
+Warm start: window creation alone (`window_built`, before any of our UI code runs) moved from
+317 to 348 ms median between these runs and Phase 4's, with identical Rust code before that
+mark; the UI part after it moved 89 → 98 ms (+1.2 KB initial JS for the shared play action).
+Treat the warm number as at the line with ±30 ms run-to-run noise; the decision from
+Phase 1 (accept, or tray reopen in Phase 9) still stands.
+
 ## Phase 4 (2026-10-29): downloads and installs
 
 Test game *while True: learn()* (feature level 13, 153 files, 153 MB download, 887 MB installed)

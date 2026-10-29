@@ -1,3 +1,4 @@
+import { SvelteSet } from 'svelte/reactivity';
 import { boot, num } from '../boot';
 import {
   commands,
@@ -50,6 +51,9 @@ class LibraryState {
   sync = $state.raw<SyncStatus>({ syncing: false, error: null, lastSync: null });
   /** Live progress of the running download (events, ~4/s). */
   progress = $state.raw<DownloadProgress | null>(null);
+  /** Games running now, and games whose launch is being prepared. */
+  running = new SvelteSet<string>();
+  starting = new SvelteSet<string>();
 
   byId = $derived(new Map(this.games.map((g) => [g.appName, g])));
 
@@ -120,7 +124,19 @@ class LibraryState {
     });
     await events.syncStatusChanged.listen((e) => (this.sync = e.payload));
     await events.downloadProgress.listen((e) => (this.progress = e.payload));
+    await events.gameRunning.listen((e) => this.setRunning(e.payload.appName, e.payload.running));
     this.sync = await commands.syncStatus();
+    for (const id of await commands.runningGames()) this.running.add(id);
+  }
+
+  setRunning(appName: string, on: boolean) {
+    if (on) this.running.add(appName);
+    else this.running.delete(appName);
+  }
+
+  setStarting(appName: string, on: boolean) {
+    if (on) this.starting.add(appName);
+    else this.starting.delete(appName);
   }
 
   async refresh() {

@@ -313,6 +313,8 @@ async fn after_sign_in(app: AppHandle, acct: AccountSummary, epoch: u64) {
 
     // Library sync uses the account's country for catalog data, so it starts now.
     if auth.epoch.load(Ordering::SeqCst) == epoch {
+        // Playtime kept from offline sessions goes first, so the sync sees Epic's new totals.
+        crate::launch::flush_playtime(&app).await;
         crate::library::sync_soon(&app);
         // Downloads interrupted by closing the app continue (they need the session).
         crate::install::kick(&app);

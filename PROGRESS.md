@@ -7,11 +7,39 @@
 - [x] **Phase 2: Auth** (2026-10-28). Live sign-in, silent restore and signed-in Epic pages verified on the owner's account.
 - [x] **Phase 3: Library** (2026-10-29). Real library synced live (35 games + 3 DLC, real covers); EGL import built, live adoption awaits the owner.
 - [x] **Phase 4: Downloads and installs** (2026-10-29). Live install, verify, repair, move and resume of a small free game into `test-installs/`.
-- [ ] Phase 5: Launch
+- [x] **Phase 5: Launch** (2026-10-29). Test game started from the app, "Playing" shown, playtime recorded and reported to Epic.
 - [ ] Phase 6: Store
 - [ ] Phase 7: Settings, wallet, profile menu
 - [ ] Phase 8: Cloud saves
 - [ ] Phase 9: Polish and ship
+
+## Phase 5 summary
+
+What works (verified live with *while True: learn()*):
+- Play from the library, Recently played and Quick Launch. Arguments built exactly as EGL's
+  (unit-tested), with an exchange code fetched right before the start and never logged.
+- Running state: the started process, anything it starts, and anything running from the
+  game's folder, checked every 2 s only while a game runs. Tiles, Recently played and Quick
+  Launch show "Starting…" and "Playing".
+- Playtime: added locally on exit and reported to Epic (verified: Epic's total grew by the
+  session). Failed reports wait in the database and go out after the next sign-in; closing the
+  app mid-game keeps the session so far. "Recently played" now fills from real launches.
+- Built and unit-tested, not exercised live: ownership tokens (`.ovt` written for the launch
+  and deleted after), offline starts with a prompt, prerequisite installers asked once, UAC only
+  when a game's own manifest requires it, EA app / Ubisoft Connect hand-off, and pausing
+  downloads while playing (resumed when the last game exits).
+- Fixed a Phase 4 leftover: Quick Launch's Install now opens the install dialog.
+- 93 Rust tests (20 api, 10 auth, 15 cache, 17 download, 3 import, 10 launch, 9 manifest, 9 app).
+
+Measured: cold 448 ms, warm 431–446 ms (window creation itself was ~30 ms slower than in
+Phase 4's runs; see `docs/perf.md`), idle 105.9 MB / 0.03 % CPU, installer 3.14 MiB.
+
+Known gaps:
+- Per-game EULAs (`eulaIds`) aren't shown before first launch yet.
+- A game already running when Next Launcher starts isn't detected; EGL's `ProcessNames`
+  for adopted installs aren't used.
+- Live tests of ownership tokens, offline start, third-party hand-off and pause-while-playing
+  need an installed title that uses them or a second small install.
 
 ## Phase 4 summary
 
@@ -43,7 +71,7 @@ Known gaps:
   are unit-tested only. Cross-drive move is unit-tested only (the only other drive holds real games).
 - Pause, resume and cancel from the download card are unit-tested in the engine, not clicked
   through live (resume after a forced kill was tested live).
-- Prerequisite installers and the manifest's uninstall action wait for Phase 5.
+- Prerequisite installers (done in Phase 5) and the manifest's uninstall action (still open).
 - Live adoption of the owner's Fortnite install (Phase 3) still awaits the owner.
 
 ## Phase 3 summary
@@ -67,7 +95,7 @@ idle 108.9 MB / 0.01 % CPU with 35 covers.
 
 Known gaps:
 - Live adoption of the owner's Fortnite install not yet tried (needs the owner's go-ahead).
-- "Recently played" stays empty until launches are tracked (Phase 5): Epic only reports totals.
+- "Recently played" stays empty until launches are tracked (done in Phase 5): Epic only reports totals.
 - Hidden-games management and "Import favorites from Epic" are not built yet.
 
 ## Phase 2 summary
@@ -128,8 +156,9 @@ Known gaps:
 
 1. **License** (ADR 0001): GPL-3.0-or-later recommended, or MIT.
 2. **Image format** (ADR 0004): store CDN-resized JPEG/WebP as-is instead of transcoding to WebP.
-3. **Warm start**: now ~370–410 ms (at the 400 ms line). Options unchanged: accept plus tray reopen
-   (Phase 9), or try WebView2 flags (risk to scroll smoothness).
+3. **Warm start**: ~370–450 ms across phases and runs (at or just over the 400 ms line; WebView2
+   window creation alone is ~320–350 ms). Options unchanged: accept plus tray reopen (Phase 9),
+   or try WebView2 flags (risk to scroll smoothness).
 4. **Mockup access**: sign in to claude.ai in the app's browser pane, or share screenshots.
 
 ## Conventions

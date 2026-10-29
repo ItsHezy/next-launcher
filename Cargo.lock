@@ -1019,6 +1019,7 @@ dependencies = [
 name = "egs-cache"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.3.4",
  "rusqlite",
  "serde",
  "serde_json",
@@ -1054,6 +1055,11 @@ dependencies = [
 [[package]]
 name = "egs-launch"
 version = "0.1.0"
+dependencies = [
+ "tempfile",
+ "thiserror 2.0.21",
+ "windows-sys 0.61.2",
+]
 
 [[package]]
 name = "egs-manifest"
@@ -2514,6 +2520,7 @@ dependencies = [
  "egs-cache",
  "egs-download",
  "egs-import",
+ "egs-launch",
  "egs-manifest",
  "regex-lite",
  "serde",

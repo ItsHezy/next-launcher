@@ -51,6 +51,8 @@ pub struct DownloadsState {
     worker: AtomicBool,
     /// Games with a move in progress, and its cancel flag. Nothing else may touch them.
     moving: Mutex<HashMap<String, Arc<AtomicBool>>>,
+    /// Set while a game runs and "Pause downloads while playing" is on: no job starts.
+    hold: AtomicBool,
     /// Development guard (`--dev-install-root`): refuse writes outside this folder.
     pub install_root: Option<PathBuf>,
 }
@@ -87,8 +89,27 @@ impl DownloadsState {
         }
     }
 
+    /// Hold the queue (no new job starts) or release it.
+    pub fn set_hold(&self, hold: bool) {
+        self.hold.store(hold, Ordering::SeqCst);
+    }
+
+    /// Pause every running job; returns their ids. The worker records the state.
+    pub fn pause_running(&self) -> Vec<i64> {
+        let Ok(controls) = self.controls.lock() else {
+            return Vec::new();
+        };
+        controls
+            .iter()
+            .map(|(id, ctl)| {
+                ctl.pause();
+                *id
+            })
+            .collect()
+    }
+
     /// Refuse while the game is being moved.
-    fn ensure_not_moving(&self, app_name: &str) -> Result<(), UiError> {
+    pub(crate) fn ensure_not_moving(&self, app_name: &str) -> Result<(), UiError> {
         let moving = self
             .moving
             .lock()
@@ -641,6 +662,12 @@ pub fn kick(app: &AppHandle) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         while let Some(state) = app.try_state::<AppState>() {
+            if app
+                .try_state::<DownloadsState>()
+                .is_some_and(|d| d.hold.load(Ordering::SeqCst))
+            {
+                break; // a game is running; the queue resumes when it exits
+            }
             let job = match state.cache.next_download() {
                 Ok(Some(j)) => j,
                 _ => break,
@@ -1140,7 +1167,7 @@ pub struct VerifyResult {
     pub problems: Vec<String>,
 }
 
-async fn installed_manifest(
+pub(crate) async fn installed_manifest(
     state: &AppState,
     game: &egs_cache::GameInstall,
 ) -> Result<Manifest, UiError> {
@@ -1542,6 +1569,9 @@ pub async fn dev_action(app: AppHandle, spec: String) {
         "uninstall" => uninstall_installed(&app, app_name, false)
             .await
             .map(|_| "uninstalled".to_owned()),
+        "launch" => crate::launch::launch(&app, app_name, &Default::default())
+            .await
+            .map(|_| "launched".to_owned()),
         "move" => match app_name.split_once('=') {
             Some((name, folder)) => move_installed(&app, name, folder, false)
                 .await

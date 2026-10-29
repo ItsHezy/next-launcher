@@ -3,7 +3,7 @@
   import Cover from '../../lib/components/Cover.svelte';
   import Icon from '../../lib/components/Icon.svelte';
   import { ago, playtime } from '../../lib/format';
-  import type { Game } from '../../lib/state/library.svelte';
+  import { library, type Game } from '../../lib/state/library.svelte';
 
   let { game, onplay }: { game: Game; onplay: (g: Game) => void } = $props();
 </script>
@@ -18,9 +18,18 @@
         {game.lastPlayed ? `Played ${ago(num(game.lastPlayed))}` : ''} · {playtime(num(game.playtimeSecs))}
       </p>
     </div>
-    <button class="btn btn-primary play" onclick={() => onplay(game)} aria-label="Play {game.title}">
-      <Icon name="play" size={16} /> Play
-    </button>
+    {#if library.running.has(game.appName)}
+      <button class="btn btn-primary play" disabled aria-label="{game.title} is running">Playing</button>
+    {:else}
+      <button
+        class="btn btn-primary play"
+        disabled={library.starting.has(game.appName)}
+        onclick={() => onplay(game)}
+        aria-label="Play {game.title}"
+      >
+        <Icon name="play" size={16} /> Play
+      </button>
+    {/if}
   </div>
 </article>
 

@@ -85,7 +85,43 @@ Never auto-accept.
   This handles bootstrappers that start the real game and exit (e.g. `FortniteBootstrapper.exe` [OBS]).
   No hooks, no handles opened beyond `PROCESS_QUERY_LIMITED_INFORMATION`, no job objects
   (they can interfere with anti-cheat launchers).
-- "Playing" state is emitted as `game://state { appName, state: "running" }`.
+- "Playing" state is emitted as the `game-running { appName, running }` event; `running_games`
+  returns the current set when the UI starts.
 - On exit: playtime += (end − start), write SQLite, `PUT` playtime to Epic (library.md), delete
-  the `.ovt`, resume paused downloads.
-- "Pause downloads while playing" pauses the queue on `running` and resumes on exit.
+  the `.ovt`, resume paused downloads. A failed `PUT` is kept in `events_log` and sent after the
+  next sign-in, before the library sync, so Epic's totals include it.
+- "Pause downloads while playing" pauses the running job and holds the queue while any game
+  runs; when the last one exits, only the jobs paused this way are resumed.
+- Closing Next Launcher while a game runs records the session so far and queues its report.
+
+## Phase 5 live check (2026-10-29, owner's account)
+
+- *while True: learn()* (`wtl.exe`, no launch command, no prerequisites, `CanRunOffline: true`,
+  no ownership token) started from the app with a fresh exchange code; the tracker followed
+  it and noticed the exit within one 2 s poll; the session was added locally and reported
+  (204), and Epic's total grew accordingly on the next sync.
+- Not exercised live: ownership tokens (5 owned titles need one, none installed), offline
+  starts, prerequisites, UAC elevation, third-party hand-off (would open the owner's Ubisoft
+  Connect), pausing a download while playing (needs a second install).
+
+## As built (Phase 5)
+
+- Start: `CreateProcessW` (`std::process::Command`) with the working folder set; on
+  `ERROR_ELEVATION_REQUIRED` (740) `ShellExecuteExW("runas")`, which shows UAC. EGL's
+  `bLaunchElevated` isn't read; the executable's own manifest decides.
+- Tracking: the started process, its descendants by parent id, and any process whose image is
+  inside the install folder. Only processes whose file name matches a `.exe` in the manifest
+  are opened (query-limited) to read their path.
+- Exchange code: fetched immediately before the start; if that fails the user is asked
+  "Couldn't reach Epic. Start <game> offline?". Without a session the cached account's id and
+  name are used for an offline start.
+- `-epicdeploymentid`: read from the build info's `sidecar.config` at launch (best effort,
+  4 s timeout, skipped offline).
+- Prerequisites: `prereq_path` / `prereq_args` from the manifest run through `ShellExecuteExW`
+  after the user agrees; exit codes 0, 3010 (restart needed) and 1638 (newer version present)
+  count as done and are remembered per prerequisite id set.
+- Third-party: `ThirdPartyManagedProvider: UbisoftConnect` with `customAttributes.GameID`
+  **[OBS]** on the owner's account (one title). Opened with `ShellExecuteExW("open")`; a
+  missing URL handler shows "Install <store> to play <game>".
+- Not built yet: per-game EULAs (catalog `eulaIds`), noticing games that were already running
+  when Next Launcher started, and EGL's `ProcessNames` for adopted installs.

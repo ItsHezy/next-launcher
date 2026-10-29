@@ -8,7 +8,7 @@
   import Segmented from '../../lib/components/Segmented.svelte';
   import { library, type Filter, type Game, type Sort } from '../../lib/state/library.svelte';
   import { settings } from '../../lib/state/settings.svelte';
-  import { comingSoon, ui } from '../../lib/state/ui.svelte';
+  import { ui } from '../../lib/state/ui.svelte';
   import GameGrid from './GameGrid.svelte';
   import RecentCard from './RecentCard.svelte';
 
@@ -25,11 +25,7 @@
     { value: 'updates', label: 'Updates', count: library.counts.updates },
   ]);
 
-  function play(g: Game) {
-    if (g.state === 'notInstalled' && g.thirdParty) comingSoon(`Opening ${g.thirdParty}`, 5);
-    else if (g.state === 'notInstalled') actions.install(g.appName);
-    else comingSoon('Launching games', 5);
-  }
+  const play = (g: Game) => void actions.play(g);
 
   async function refresh() {
     const err = await library.refresh();

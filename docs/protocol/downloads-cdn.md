@@ -130,7 +130,7 @@ decrypted feature level 22+ copy and verify must work offline. They are never lo
 removed with the manifest copy. Prerequisite info, `can_run_offline` and
 `requires_ownership_token` come with Phase 5.
 
-## 6. Prerequisites — [REF] (not built yet: Phase 5)
+## 6. Prerequisites — [REF] (built in Phase 5, see launch.md "As built")
 
 Manifest meta `prereq_ids/prereq_name/prereq_path/prereq_args` describe an installer
 (typically a VC++ redistributable) shipped inside the game folder. EGL runs it after install.

@@ -7,7 +7,9 @@ export type Dialog =
   | 'import'
   | { kind: 'install'; appName: string }
   | { kind: 'uninstall'; appName: string }
-  | { kind: 'move'; appName: string };
+  | { kind: 'move'; appName: string }
+  /** A launch needs an answer first (prerequisites, offline start). */
+  | { kind: 'launch'; appName: string; code: string; message: string };
 
 interface Toast {
   id: number;

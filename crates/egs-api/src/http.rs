@@ -17,6 +17,8 @@ pub struct Hosts {
     pub library: String,
     pub catalog: String,
     pub eula: String,
+    /// Ownership tokens (launch.md).
+    pub ecom: String,
 }
 
 impl Hosts {
@@ -28,6 +30,7 @@ impl Hosts {
             library: "https://library-service.live.use1a.on.epicgames.com".into(),
             catalog: "https://catalog-public-service-prod06.ol.epicgames.com".into(),
             eula: "https://eulatracking-public-service-prod06.ol.epicgames.com".into(),
+            ecom: "https://ecommerceintegration-public-service-ecomprod02.ol.epicgames.com".into(),
         }
     }
 
@@ -40,7 +43,8 @@ impl Hosts {
             launcher: b.clone(),
             library: b.clone(),
             catalog: b.clone(),
-            eula: b,
+            eula: b.clone(),
+            ecom: b,
         }
     }
 }

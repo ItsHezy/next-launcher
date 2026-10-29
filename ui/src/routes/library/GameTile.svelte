@@ -1,7 +1,8 @@
 <script lang="ts">
   import Cover from '../../lib/components/Cover.svelte';
   import Icon from '../../lib/components/Icon.svelte';
-  import type { Game } from '../../lib/state/library.svelte';
+  import { storeName } from '../../lib/format';
+  import { library, type Game } from '../../lib/state/library.svelte';
 
   let {
     game,
@@ -10,11 +11,14 @@
   }: { game: Game; onplay: (g: Game) => void; onmenu: (g: Game, x: number, y: number) => void } = $props();
 
   const installed = $derived(game.state === 'installed' || game.state === 'updateAvailable');
+  const playing = $derived(library.running.has(game.appName));
+  const starting = $derived(library.starting.has(game.appName));
   const external = $derived(!installed && !!game.thirdParty);
   const unavailable = $derived(!installed && !game.installable && !game.thirdParty);
+  const store = $derived(game.thirdParty ? storeName(game.thirdParty) : '');
   const action = $derived(
     external
-      ? `Open in ${game.thirdParty}:`
+      ? `Open in ${store}:`
       : unavailable
         ? 'Not installable on Windows:'
         : game.state === 'notInstalled'
@@ -38,14 +42,18 @@
   <div class="meta">
     <div class="txt">
       <div class="name" title={game.title}>{game.title}</div>
-      {#if game.state === 'installed'}
+      {#if playing}
+        <div class="st status-active">Playing</div>
+      {:else if starting}
+        <div class="st status-active">Starting…</div>
+      {:else if game.state === 'installed'}
         <div class="st status-ready">Ready</div>
       {:else if game.state === 'updateAvailable'}
         <div class="st status-update">Update available</div>
       {:else if game.state === 'installing'}
         <div class="st status-active">Installing</div>
       {:else if external}
-        <div class="st status-muted">Opens in {game.thirdParty}</div>
+        <div class="st status-muted">Opens in {store}</div>
       {:else if unavailable}
         <div class="st status-muted">Not on Windows</div>
       {:else}
@@ -55,8 +63,8 @@
     <button
       class="round"
       class:play={installed}
-      aria-label="{action} {game.title}"
-      disabled={game.state === 'installing' || unavailable}
+      aria-label="{playing ? 'Playing' : action} {game.title}"
+      disabled={game.state === 'installing' || unavailable || playing || starting}
       onclick={() => onplay(game)}
     >
       <Icon

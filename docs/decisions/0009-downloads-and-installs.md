@@ -35,6 +35,6 @@ a small free game into the git-ignored `test-installs/` folder.
 - **Dev tooling**: `--dev-action <install|verify|repair|uninstall>:<app>` and
   `--dev-action move:<app>=<folder>` run the same code paths as the buttons after the first sync.
 
-Not built yet: prerequisites installers and `uninstall_action_path` (Phase 5), SSD-aware verify
+Not built yet: `uninstall_action_path` (prerequisite installers came with Phase 5), SSD-aware verify
 parallelism, cross-drive move tested live (unit-tested only; the only other drive holds the
 owner's real games).

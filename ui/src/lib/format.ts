@@ -44,3 +44,11 @@ export function initials(name: string): string {
   const parts = name.split(/\s+/).filter((p) => /[A-Za-z0-9]/.test(p[0] ?? ''));
   return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
 }
+
+/** Display name of the store that manages a third-party title (catalog provider id). */
+export function storeName(provider: string): string {
+  const p = provider.toLowerCase();
+  if (p.includes('ubisoft') || p.includes('uplay')) return 'Ubisoft Connect';
+  if (p.includes('origin') || p.includes('ea')) return 'EA app';
+  return provider;
+}
