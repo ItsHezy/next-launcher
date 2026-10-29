@@ -11,3 +11,10 @@ Status: Accepted (2026-10-28)
   view switches to the embedded signed-in web store, and the event is logged once per session
   (without URLs that carry tokens).
 - Purchases always happen on Epic's checkout page, completed by the user.
+
+**Phase 6 update (2026-10-29):** product pages use only `catalogOffer` on the same GraphQL host
+(the platform service isn't needed yet); queries use GraphQL variables. Store images load straight
+from Epic's CDNs (`cdn1.epicgames.com`, `cdn2.unrealengine.com`, resized by the CDN), which the
+UI's CSP allows for `img-src` only. A bot check is detected (HTML or a 403/429 without Epic's
+error body), logged once, and the view offers "Open Epic's store" instead. No bot check was seen
+during Phase 6.

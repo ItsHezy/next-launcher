@@ -13,6 +13,7 @@ mod paths;
 mod protocol;
 mod redact;
 mod startup;
+mod store;
 
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
@@ -115,6 +116,11 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             install::uninstall_game,
             launch::launch_game,
             launch::running_games,
+            store::store_featured,
+            store::store_browse,
+            store::store_search,
+            store::store_product,
+            store::store_open,
         ])
         .events(tauri_specta::collect_events![
             auth::AuthChanged,
@@ -289,7 +295,7 @@ fn main() {
             app.manage(launch::LaunchState::default());
             install::apply_speed_limit(app.handle());
 
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+            let main = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Next Launcher")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(960.0, 600.0)
@@ -302,6 +308,13 @@ fn main() {
                 .initialization_script(format!("window.__NL_BOOT__={};", boot.json))
                 .build()?;
             startup::mark("window_built");
+            // Closing the main window quits, even while an Epic web window is open.
+            let quit = app.handle().clone();
+            main.on_window_event(move |e| {
+                if matches!(e, tauri::WindowEvent::Destroyed) {
+                    quit.exit(0);
+                }
+            });
 
             let handle = app.handle().clone();
             std::thread::spawn(move || {

@@ -1,10 +1,12 @@
 <script lang="ts">
   import { dismiss } from '../actions';
+  import { commands, type StoreTarget } from '../bindings';
   import { wallet } from '../mock';
   import { auth } from '../state/auth.svelte';
   import { library } from '../state/library.svelte';
   import { router, type Route } from '../state/router.svelte';
-  import { comingSoon, ui } from '../state/ui.svelte';
+  import { store } from '../state/store.svelte';
+  import { ui } from '../state/ui.svelte';
   import Avatar from './Avatar.svelte';
   import Icon from './Icon.svelte';
   import ProfileMenu from './ProfileMenu.svelte';
@@ -26,14 +28,27 @@
 
   const name = $derived(auth.displayName || 'Epic account');
 
+  // Search follows the section: the Store searches Epic's store, everything else the library.
+  const onStore = $derived(router.route === 'store');
+  const query = $derived(onStore ? store.query : library.query);
+
   function openSearch() {
     searching = true;
-    if (router.route !== 'library') router.go('library');
+    if (router.route !== 'library' && router.route !== 'store') router.go('library');
     queueMicrotask(() => searchInput?.focus());
   }
+  function setQuery(q: string, now = false) {
+    if (onStore) store.setQuery(q, now);
+    else library.query = q;
+  }
   function closeSearch() {
+    if (store.query) store.setQuery('', true);
     library.query = '';
     searching = false;
+  }
+  async function openEpic(target: StoreTarget) {
+    const res = await commands.storeOpen(target);
+    if (res.status === 'error') ui.toast(res.error.message);
   }
 </script>
 
@@ -55,19 +70,25 @@
         <Icon name="search" size={18} />
         <input
           bind:this={searchInput}
-          bind:value={library.query}
+          value={query}
+          oninput={(e) => setQuery(e.currentTarget.value)}
           type="search"
-          placeholder="Search your library"
-          aria-label="Search your library"
-          onkeydown={(e) => e.key === 'Escape' && closeSearch()}
-          onblur={() => !library.query && (searching = false)}
+          placeholder={onStore ? 'Search the store' : 'Search your library'}
+          aria-label={onStore ? 'Search the store' : 'Search your library'}
+          onkeydown={(e) => {
+            if (e.key === 'Escape') closeSearch();
+            else if (e.key === 'Enter') setQuery(e.currentTarget.value, true);
+          }}
+          onblur={() => !query && (searching = false)}
         />
       </div>
     {:else}
       <button class="icon-btn" aria-label="Search" onclick={openSearch}><Icon name="search" /></button>
     {/if}
-    <button class="icon-btn" aria-label="Wishlist" onclick={() => comingSoon('Wishlist', 6)}><Icon name="heart" /></button>
-    <button class="icon-btn" aria-label="Cart" onclick={() => comingSoon('Cart', 6)}><Icon name="cart" /></button>
+    <button class="icon-btn" aria-label="Wishlist (opens Epic's page)" onclick={() => openEpic({ kind: 'wishlist' })}>
+      <Icon name="heart" />
+    </button>
+    <button class="icon-btn" aria-label="Cart (opens Epic's page)" onclick={() => openEpic({ kind: 'cart' })}><Icon name="cart" /></button>
 
     {#if auth.hasAccount}
     <div class="anchor">

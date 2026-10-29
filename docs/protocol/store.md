@@ -20,23 +20,25 @@ originalPrice, currencyCode, fmtPrice{originalPrice, discountPrice, intermediate
 - Cache until the earliest `endDate`/`startDate` boundary, max 6 h.
 - "Claim" opens the product page in the embedded signed-in store (a $0 checkout is still a purchase flow).
 
-## Search / browse — [OBS] basic query works; arguments [REF]/[GUESS]
+## Search / browse — [OBS] (Phase 6: all arguments below verified)
 
-`POST https://store.epicgames.com/graphql` with `Content-Type: application/json` and a raw
-(non-persisted) query:
+`POST https://store.epicgames.com/graphql` with `Content-Type: application/json` and a
+non-persisted query. Since Phase 6 the app sends **GraphQL variables** (`$keywords`, `$country`,
+...) so search text is never pasted into the query string. Variables work as typed below
+(`count/start: Int`, `country: String!`, `onSale: Boolean`, the rest `String`). **[OBS]**
 
 ```graphql
 query { Catalog { searchStore(
   count: 40, start: 0, country: "US", locale: "en-US",
-  category: "games/edition/base|bundles/games|editors",   # [GUESS] pipe-OR syntax
-  sortBy: "releaseDate", sortDir: "DESC",                # [OBS] accepted
-  keywords: "<text>",                                    # [GUESS]
-  onSale: true,                                          # [GUESS]
-  tag: "1216|1210",                                      # [GUESS] genre/feature tag ids
-  withPrice: true                                        # [GUESS]
+  category: "games/edition/base|bundles/games|editors",   # [OBS] pipe-OR works
+  sortBy: "releaseDate", sortDir: "DESC",                # [OBS]; also "currentPrice", "relevancy"
+  keywords: "<text>",                                    # [OBS] all words must match
+  onSale: true,                                          # [OBS]
+  releaseDate: "[,2026-10-29T23:59:59.999Z]",            # [OBS] released up to then
+  tag: "1216|1210",                                      # [GUESS] genre/feature tag ids (unused)
 ) {
   elements { title id namespace productSlug urlSlug offerType effectiveDate
-             keyImages { type url } seller { name }
+             keyImages { type url } seller { name } items { id }
              price(country: "US") { totalPrice { discountPrice originalPrice currencyCode fmtPrice(locale: "en-US") { originalPrice discountPrice } } }
              catalogNs { mappings(pageType: "productHome") { pageSlug } } }
   paging { count total } } } }
@@ -54,12 +56,26 @@ Chip mapping (Phase 6):
 
 | Chip | Source |
 |---|---|
-| Featured | **[GUESS]**: not found yet. Candidates to probe in Phase 6: platform-service discover modules, store CMS collections (`top-sellers`, `most-played`). Fallback: `searchStore` sorted by `effectiveDate` DESC. |
+| Featured | An overview of the three rows below (6 each, "See all" per row). No documented curated feed: `egs-platform-service .../api/v2/public/discover/home` exists but rejects every `platform` value we tried (`pc`, `Windows`), and we stopped there rather than guess further. `sortBy: "relevancy"` without keywords is just catalog order. **[OBS]** |
 | Free games | free-games feed |
-| On sale | `searchStore(onSale: true, sortBy: "currentPrice")` |
-| New releases | `searchStore(sortBy: "releaseDate", sortDir: "DESC")`, releaseDate ≤ now |
+| On sale | `searchStore(onSale: true, sortBy: "currentPrice", sortDir: "DESC")` (sorting ASC lists 100 %-off giveaways first) |
+| New releases | `searchStore(sortBy: "releaseDate", sortDir: "DESC", releaseDate: "[,<now>]")` |
+
+Ownership badges: library rows carry the *launcher's* catalog item id, which differs from the
+store offer's `items[].id` for the same game **[OBS]** (ABZÛ: `1e4e…` in the library, `e877…`
+in the store). The namespace matches. "In library" = every offer item is owned, or the offer is a
+`BASE_GAME` and the account owns a base game in that namespace. Editions, bundles and add-ons
+need the item ids.
 
 ## Product pages — [OBS] / [REF]
+
+**As built (Phase 6):** one GraphQL call, `Catalog.catalogOffer(namespace, id, locale)` with
+`description longDescription developerDisplayName publisherDisplayName releaseDate tags { name
+groupName }` plus the search fields, has everything the product view shows **[OBS]**.
+`longDescription` is Markdown with `<!--textBlock-->`-style comments; the UI parses it into plain
+data (headings, paragraphs, lists, bold/italic, images from Epic's CDNs only) and never inserts
+HTML. The platform-service calls below also work unauthenticated **[OBS]** (`mappings/<slug>` →
+`productId`, `sandboxId` = offer namespace; `products/<id>`; `category-cards`) but aren't needed yet.
 
 Epic's newer REST "EGS Platform Service" (no auth):
 
@@ -83,21 +99,24 @@ Legendary sends them to `launcher.store.epicgames.com`, which challenged our pro
 whether `store.epicgames.com/graphql` accepts them with our bearer token. If not, Achievements
 stays a web page.
 
-## Wishlist, cart, checkout — [GUESS] → embedded web
+## Wishlist, cart, checkout — [OBS] → embedded web
 
 - Wishlist and cart are store-site features tied to the web session. No usable API is documented
-  in our references. v1: the top-bar Wishlist/Cart buttons open `https://store.epicgames.com/wishlist`
-  and `https://store.epicgames.com/cart` in the signed-in web window. Paths to verify in Phase 6.
+  in our references. The top-bar Wishlist/Cart buttons open `https://store.epicgames.com/<lang>/wishlist`
+  and `/<lang>/cart` in the signed-in web window (exchange-code bridge, auth.md §6).
 - **Checkout is always Epic's own page** in the signed-in web window. We build a product or cart URL,
   and the user completes payment, 2FA and confirmation themselves. No purchase step is automated.
-  A direct offer checkout URL of the form `https://store.epicgames.com/purchase?offers=1-<namespace>-<offerId>` is **[GUESS]**, to verify in Phase 6.
+  `https://store.epicgames.com/purchase?offers=1-<namespace>-<offerId>` opens Epic's checkout
+  for that offer, signed in **[OBS]** (Phase 6: a free giveaway showed "Add to library"; nothing
+  was clicked). Product pages: `https://store.epicgames.com/<lang>/p/<slug>` **[OBS]**.
+  Slugs and ids are checked (`[A-Za-z0-9_-]`) before they go into a URL.
 - After the web window closes, trigger a library refresh (new purchases show up within seconds).
 
 ## Caching
 
 | Data | TTL |
 |---|---|
-| searchStore pages | 10 min |
-| product summary | 1 h |
+| searchStore pages (browse and search) | 10 min |
+| offer details | 1 h |
 | free games | until next promo boundary (≤ 6 h) |
 | category cards | 24 h |

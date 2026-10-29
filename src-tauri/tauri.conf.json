@@ -18,7 +18,7 @@
         "default-src": "'self'",
         "script-src": "'self'",
         "style-src": "'self' 'unsafe-inline'",
-        "img-src": "'self' data: http://img.localhost img:",
+        "img-src": "'self' data: http://img.localhost img: https://cdn1.epicgames.com https://cdn2.unrealengine.com",
         "font-src": "'self'",
         "connect-src": "ipc: http://ipc.localhost"
       },

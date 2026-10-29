@@ -8,6 +8,24 @@ AMD Ryzen 5 5600X (6C/12T), 32 GB RAM, NVMe SSD, RTX 3060 Ti, 200 Hz display, Wi
 10.0.26200, WebView2 runtime 156.0.4314.50. That's upper mid-range; numbers on a true mid-range PC
 will be somewhat higher.
 
+## Phase 6 (2026-10-29): store
+
+| Metric | Budget | Measured |
+|---|---|---|
+| Warm start, standard bench, median of 7 | ≤ 400 ms | **401 ms** (min 387) ≈ at the line |
+| Cold start, standard bench, median of 7 | ≤ 1.0 s | **410 ms** ✅ |
+| Idle RAM, signed in, Store not opened | ≤ 150 MB | **105.9 MB** ✅ |
+| Idle CPU | ~0 % | **0.03 %** ✅ |
+| Installer (NSIS) | ≤ 15 MB | **3.21 MiB** ✅ (exe 8.35 MiB) |
+| Initial / total JS (gz) | 80 / 250 KB | 36.6 / 58.8 KB ✅ (Store route lazy; store state in the initial chunk for the top-bar search) |
+| Store Featured, cold (free feed + 2 searches in parallel) | | 344 ms |
+| Store search (network) / product details (network) | | 215–314 ms / 188 ms |
+| Same views again (SQLite cache) | | 0 ms network, no requests |
+| Idle RAM / CPU with the Store open (Featured, 17 cards) | ≤ 150 MB | **102.7 MB / 0.05 %** ✅ |
+
+Window creation was back to 317 ms median (Phase 5's runs: 348 ms with identical code before
+that mark), which confirms Phase 5's slower warm start was the machine, not the code.
+
 ## Phase 5 (2026-10-29): launch
 
 | Metric | Budget | Measured |

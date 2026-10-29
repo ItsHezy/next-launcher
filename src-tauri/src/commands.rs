@@ -25,7 +25,7 @@ pub struct AppState {
 }
 
 /// Error shape the UI receives. `message` is written for people; details go to the log.
-#[derive(Debug, Serialize, specta::Type)]
+#[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct UiError {
     pub code: String,
@@ -45,7 +45,12 @@ impl UiError {
 impl From<egs_api::ApiError> for UiError {
     fn from(e: egs_api::ApiError) -> Self {
         tracing::warn!(error = %e, "Epic API error");
-        let (code, message) = if e.is_transient() {
+        let (code, message) = if matches!(e, egs_api::ApiError::Challenge) {
+            (
+                "challenge",
+                "Epic's store wants to check you're human. Opening it on Epic's site instead.",
+            )
+        } else if e.is_transient() {
             ("offline", "Couldn't reach Epic's servers. Retrying later.")
         } else if e.is_auth_invalid() {
             ("sessionExpired", "Your Epic session ended. Sign in again.")

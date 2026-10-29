@@ -85,6 +85,16 @@ How each fact was obtained. Raw downloads and probe output live in `research/ref
 | L22 | Owned installable games: 5 of 38 need an ownership token, 1 can't run offline, 2 have `AdditionalCommandLine` | catalog `customAttributes`, counts only |
 | L23 | The one third-party title uses `ThirdPartyManagedProvider: UbisoftConnect` and `GameID` | catalog `customAttributes` |
 
+## Phase 6 live verification (2026-10-29, public store data; signed-in pages on the owner's account)
+
+| # | Finding | Evidence |
+|---|---|---|
+| L24 | `store.epicgames.com/graphql` `searchStore` accepts GraphQL variables; `keywords`, `onSale`, `releaseDate` range, pipe-OR `category`, `sortBy` `releaseDate`/`currentPrice`/`relevancy` all work; no bot check in ~15 requests with the launcher UA | probes `research/probe/p6/`, app log |
+| L25 | `catalogOffer(namespace, id, locale)` returns `longDescription` (Markdown with `<!--…-->` block comments), developer/publisher, tags with `groupName` | probe, product view |
+| L26 | Platform service `mappings/<slug>`, `products/<id>`, `category-cards` work unauthenticated; `sandboxId` = offer namespace; `api/v2/public/discover/home` exists but its `platform` value is unknown (400 for `pc`, `Windows`) | probes |
+| L27 | Library catalog item ids differ from the store offer's `items[].id` for the same game; namespaces match | ABZÛ comparison |
+| L28 | `store.epicgames.com/<lang>/p/<slug>` and `/purchase?offers=1-<ns>-<offer>` open signed in through the exchange-code bridge; the checkout shows Epic's own confirm button | screenshots in `.dev-data/shots/` (not committed) |
+
 ## Open questions (carried into phases)
 
 | Question | Phase |
@@ -92,6 +102,6 @@ How each fact was obtained. Raw downloads and probe output live in `research/ref
 | exact action bits for account update, kill OTHERS, wallet, fulfillment (resources present, L5) | 7 |
 | catalog bulk max ids per request (25 works; larger untested) | 6 |
 | a small free test game the owner owns: *while True: learn()* chosen by the owner (Phase 4) | done |
-| store "Featured" source, searchStore filter args, checkout URL format | 6 |
+| store "Featured" source (discover v2 `platform` value) | open; Featured = overview rows |
 | achievements GraphQL on store.epicgames.com with bearer | 7 |
 | presence connection cost vs idle budget | 7 |

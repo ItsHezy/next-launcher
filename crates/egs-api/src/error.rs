@@ -37,6 +37,10 @@ pub enum ApiError {
     Decode(String),
     #[error("invalid request: {0}")]
     Invalid(String),
+    /// A web host answered with a bot check (captcha page, block page) instead of data.
+    /// Never solved or worked around: the UI opens Epic's own page instead (ADR 0005).
+    #[error("Epic's store asked for a human check")]
+    Challenge,
 }
 
 impl ApiError {

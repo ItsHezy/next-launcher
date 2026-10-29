@@ -46,6 +46,15 @@ export const commands = {
 	uninstallGame: (appName: string, options: UninstallOptions) => typedError<null, UiError>(__TAURI_INVOKE("uninstall_game", { appName, options })),
 	launchGame: (appName: string, options: LaunchOptions_Deserialize) => typedError<null, UiError>(__TAURI_INVOKE("launch_game", { appName, options })),
 	runningGames: () => __TAURI_INVOKE<string[]>("running_games"),
+	storeFeatured: () => typedError<StoreFeatured_Serialize, UiError>(__TAURI_INVOKE("store_featured")),
+	storeBrowse: (chip: StoreChip, start: number | null) => typedError<StorePage_Serialize, UiError>(__TAURI_INVOKE("store_browse", { chip, start })),
+	storeSearch: (query: string, start: number | null) => typedError<StorePage_Serialize, UiError>(__TAURI_INVOKE("store_search", { query, start })),
+	storeProduct: (namespace: string, id: string) => typedError<StoreProduct_Serialize, UiError>(__TAURI_INVOKE("store_product", { namespace, id })),
+	/**
+	 *  Open an Epic store page in the signed-in web window (wishlist, cart, checkout...).
+	 *  Purchases always finish there, by the user; we never press anything on that page.
+	 */
+	storeOpen: (target: StoreTarget) => typedError<null, UiError>(__TAURI_INVOKE("store_open", { target })),
 };
 
 /** Events */
@@ -349,6 +358,113 @@ export type MoveResult = {
 
 /**  A stored setting. Settings are flat `section.key` → scalar. */
 export type SettingValue = boolean | number | null | string;
+
+export type StoreChip = "free" | "onSale" | "newReleases";
+
+export type StoreFeatured = StoreFeatured_Serialize | StoreFeatured_Deserialize;
+
+export type StoreFeatured_Deserialize = {
+	free: StoreOffer_Deserialize[],
+	onSale: StoreOffer_Deserialize[],
+	newReleases: StoreOffer_Deserialize[],
+};
+
+export type StoreFeatured_Serialize = {
+	free: StoreOffer_Serialize[],
+	onSale: StoreOffer_Serialize[],
+	newReleases: StoreOffer_Serialize[],
+};
+
+export type StoreOffer = StoreOffer_Serialize | StoreOffer_Deserialize;
+
+export type StoreOffer_Deserialize = {
+	id: string,
+	namespace: string,
+	title: string,
+	seller: string,
+	slug?: string | null,
+	/**  Resized by Epic's CDN for the grid (3:4). */
+	imageTall?: string | null,
+	/**  Resized for headers (16:9). */
+	imageWide?: string | null,
+	price?: StorePrice | null,
+	/**  Every item it grants is already in the library. */
+	owned: boolean,
+	/**  Free-games feed: the giveaway window (ISO-8601 UTC). */
+	freeFrom?: string | null,
+	freeUntil?: string | null,
+};
+
+export type StoreOffer_Serialize = {
+	id: string,
+	namespace: string,
+	title: string,
+	seller: string,
+	slug: string | null,
+	/**  Resized by Epic's CDN for the grid (3:4). */
+	imageTall: string | null,
+	/**  Resized for headers (16:9). */
+	imageWide: string | null,
+	price: StorePrice | null,
+	/**  Every item it grants is already in the library. */
+	owned: boolean,
+	/**  Free-games feed: the giveaway window (ISO-8601 UTC). */
+	freeFrom: string | null,
+	freeUntil: string | null,
+};
+
+export type StorePage = StorePage_Serialize | StorePage_Deserialize;
+
+export type StorePage_Deserialize = {
+	offers: StoreOffer_Deserialize[],
+	start: number | null,
+	total: number | null,
+};
+
+export type StorePage_Serialize = {
+	offers: StoreOffer_Serialize[],
+	start: number | null,
+	total: number | null,
+};
+
+export type StorePrice = {
+	fmtOriginal: string,
+	fmtCurrent: string,
+	/**  Percent off, 0 when not discounted. */
+	discount: number | null,
+	free: boolean,
+};
+
+export type StoreProduct = StoreProduct_Serialize | StoreProduct_Deserialize;
+
+export type StoreProduct_Deserialize = {
+	offer: StoreOffer_Deserialize,
+	description: string,
+	/**  Markdown; the UI renders it as text with simple formatting, never as HTML. */
+	longDescription: string,
+	developer: string,
+	publisher: string,
+	releaseDate?: string | null,
+	genres: string[],
+	features: string[],
+};
+
+export type StoreProduct_Serialize = {
+	offer: StoreOffer_Serialize,
+	description: string,
+	/**  Markdown; the UI renders it as text with simple formatting, never as HTML. */
+	longDescription: string,
+	developer: string,
+	publisher: string,
+	releaseDate: string | null,
+	genres: string[],
+	features: string[],
+};
+
+/**  Epic store pages opened in the signed-in web window. */
+export type StoreTarget = { kind: "home" } | { kind: "wishlist" } | { kind: "cart" } | { kind: "product"; slug: string } | 
+/**  Epic's checkout for one offer: the user reviews and pays there. */
+{ kind: "checkout"; namespace: string; offerId: string } | { kind: "search"; query: string };
 
 export type SyncStatus = SyncStatus_Serialize | SyncStatus_Deserialize;
 

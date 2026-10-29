@@ -19,6 +19,10 @@ pub struct Hosts {
     pub eula: String,
     /// Ownership tokens (launch.md).
     pub ecom: String,
+    /// Store GraphQL (`/graphql`).
+    pub store: String,
+    /// Free-games promotions feed.
+    pub store_static: String,
 }
 
 impl Hosts {
@@ -31,6 +35,8 @@ impl Hosts {
             catalog: "https://catalog-public-service-prod06.ol.epicgames.com".into(),
             eula: "https://eulatracking-public-service-prod06.ol.epicgames.com".into(),
             ecom: "https://ecommerceintegration-public-service-ecomprod02.ol.epicgames.com".into(),
+            store: "https://store.epicgames.com".into(),
+            store_static: "https://store-site-backend-static-ipv4.ak.epicgames.com".into(),
         }
     }
 
@@ -44,7 +50,9 @@ impl Hosts {
             library: b.clone(),
             catalog: b.clone(),
             eula: b.clone(),
-            ecom: b,
+            ecom: b.clone(),
+            store: b.clone(),
+            store_static: b,
         }
     }
 }

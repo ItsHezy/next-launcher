@@ -585,7 +585,7 @@ impl EpicPage {
     }
 }
 
-fn encode(s: &str) -> String {
+pub(crate) fn encode(s: &str) -> String {
     s.bytes()
         .map(|b| match b {
             b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
@@ -620,7 +620,37 @@ fn open_web_window(app: &AppHandle, url: &str, profile: std::path::PathBuf) -> R
             tracing::error!(error = %e, "could not open the Epic web window");
             err("window")
         })?;
+    // Purchases, claims and wishlist changes made there show up after it closes.
+    let handle = app.clone();
+    if let Some(w) = app.get_webview_window(WEB_WINDOW) {
+        w.on_window_event(move |e| {
+            if matches!(e, tauri::WindowEvent::Destroyed) {
+                crate::library::sync_soon(&handle);
+            }
+        });
+    }
     Ok(())
+}
+
+/// Open any Epic web page in the web window, signed in through an exchange code when
+/// we have a session (else as a guest; Epic's page offers its own sign-in).
+pub(crate) async fn open_signed_in(app: &AppHandle, url: &str) -> Result<(), UiError> {
+    let (Some(auth), Some(state)) = (app.try_state::<AuthState>(), app.try_state::<AppState>())
+    else {
+        return Err(UiError::internal("state"));
+    };
+    let target = match auth.session.exchange_code().await {
+        Ok(code) => format!(
+            "https://www.epicgames.com/id/exchange?exchangeCode={}&redirectUrl={}",
+            code.expose(),
+            encode(url)
+        ),
+        Err(e) => {
+            tracing::info!(error = %e, "opening Epic page without signing in");
+            url.to_owned()
+        }
+    };
+    open_web_window(app, &target, state.paths.webview_web.clone())
 }
 
 /// Open an Epic page already signed in: our token → exchange code → web session.

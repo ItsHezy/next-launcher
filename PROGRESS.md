@@ -8,10 +8,36 @@
 - [x] **Phase 3: Library** (2026-10-29). Real library synced live (35 games + 3 DLC, real covers); EGL import built, live adoption awaits the owner.
 - [x] **Phase 4: Downloads and installs** (2026-10-29). Live install, verify, repair, move and resume of a small free game into `test-installs/`.
 - [x] **Phase 5: Launch** (2026-10-29). Test game started from the app, "Playing" shown, playtime recorded and reported to Epic.
-- [ ] Phase 6: Store
+- [x] **Phase 6: Store** (2026-10-29). Live store: Featured, free games, on sale, new releases, search, product pages; wishlist, cart and checkout on Epic's own pages, signed in.
 - [ ] Phase 7: Settings, wallet, profile menu
 - [ ] Phase 8: Cloud saves
 - [ ] Phase 9: Polish and ship
+
+## Phase 6 summary
+
+What works (verified live):
+- Store tab with chips: **Featured** (rows of Free now, On sale and New releases with "See all"),
+  **Free games** (Epic's weekly giveaways with their dates), **On sale**, **New releases**, and
+  "Show more" paging. Top-bar search searches the store while the Store is open.
+- Product pages: price and discount, giveaway dates, tags, Epic's long description rendered as
+  plain formatted text (no HTML from the catalog ever reaches the page).
+- "In library" badges for games the account owns (verified with ABZÛ).
+- **Buy now / Get** opens Epic's own checkout for that offer in the signed-in window; nothing is
+  bought until the user confirms there. Wishlist and Cart open Epic's pages, signed in. When that
+  window closes, the library syncs so purchases show up.
+- Store data is cached in SQLite (10 min lists, 1 h details, free games until the next giveaway
+  boundary); repeat visits cost no requests. A bot check would switch the view to Epic's own
+  store page; none was seen.
+- Fixed: closing the main window now quits even while an Epic web window is open.
+- 103 Rust tests (25 api, 10 auth, 17 cache, 17 download, 3 import, 10 launch, 9 manifest, 12 app).
+
+Measured: cold 410 ms, warm 401 ms (back at the 400 ms line), idle 105.9 MB / 0.03 % CPU (102.7 MB with the Store open), installer 3.21 MiB. Details in `docs/perf.md`.
+
+Known gaps:
+- No curated "Featured" feed from Epic is documented; Featured is an overview of the other rows.
+- Genre/feature filters, editions and add-ons lists, screenshots and system requirements aren't
+  shown yet (the product page links to Epic's page for those).
+- Wishlist and cart are Epic's web pages; there's no in-app wishlist list.
 
 ## Phase 5 summary
 

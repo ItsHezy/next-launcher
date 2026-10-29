@@ -9,6 +9,9 @@ mod migrations;
 mod mock;
 pub mod model;
 mod play;
+mod store;
+
+pub use store::Owned;
 mod sync;
 
 use std::collections::BTreeMap;

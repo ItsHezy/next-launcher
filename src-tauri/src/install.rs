@@ -1569,6 +1569,8 @@ pub async fn dev_action(app: AppHandle, spec: String) {
         "uninstall" => uninstall_installed(&app, app_name, false)
             .await
             .map(|_| "uninstalled".to_owned()),
+        "store" => crate::store::dev_check(&app, app_name).await,
+        "open" => crate::store::dev_open(&app, app_name).await,
         "launch" => crate::launch::launch(&app, app_name, &Default::default())
             .await
             .map(|_| "launched".to_owned()),
