@@ -12,6 +12,9 @@ pub struct Paths {
     pub logs: PathBuf,
     pub images: PathBuf,
     pub webview_ui: PathBuf,
+    /// Epic login + signed-in Epic pages share one profile, so the login cookie
+    /// also signs in account pages (ADR 0002, revised in Phase 2).
+    pub webview_web: PathBuf,
 }
 
 impl Paths {
@@ -22,6 +25,7 @@ impl Paths {
             logs: root.join("logs"),
             images: root.join("images"),
             webview_ui: root.join("webview").join("ui"),
+            webview_web: root.join("webview").join("web"),
             root,
         }
     }

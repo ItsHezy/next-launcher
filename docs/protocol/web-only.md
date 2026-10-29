@@ -3,11 +3,9 @@
 Phase 0 result (2026-10-28), to be shown to the owner before Phase 2.
 
 **How "signed-in web page" works:** our token → single-use exchange code → web session cookie
-in a dedicated web window → Epic's page opens already signed in (auth.md §6). Routes exist
-**[OBS]**. The success path is **[GUESS]** until Phase 2 verifies it with a real sign-in.
-**If the bridge turns out not to work**, the closest honest alternative is: the user signs in
-**once** inside the web window (the cookie persists in its own profile), and after that pages open
-signed in. Still no repeated logins, but one extra sign-in on first use.
+in a dedicated web window → Epic's page opens already signed in (auth.md §6).
+**Verified in Phase 2 (2026-10-28):** with all web cookies deleted, the account Password page
+opened signed in from the stored session alone. No extra sign-in is ever needed.
 
 ## A. Web page only (no usable API found)
 
@@ -36,9 +34,11 @@ signed in. Still no repeated logins, but one extra sign-in on first use.
 | 21 | Help & support, contact support, legal pages | epicgames.com help/legal pages | legal pages don't need sign-in |
 | 22 | "Corrective actions" Epic may demand (accept new privacy policy, confirm birth date, etc.) | `continuationUrl` from the token error | opens automatically when Epic asks |
 
-## B. API exists, but the launcher client's permission is not yet confirmed
+## B. API exists, permission resource present (action bits checked in Phase 7)
 
-Each one falls back to the web page if Epic denies our token. Checked in Phase 2/7 with `verify?includePerms`.
+The Phase 2 sign-in showed 150 permissions on the launcher token, including resources for
+account updates, token/session kill, fulfillment (codes), rewards (wallet) and library. Phase 7
+checks the exact resource + action for each row below; any row Epic denies falls back to its page.
 
 | Feature | API | Fallback page |
 |---|---|---|

@@ -257,11 +257,103 @@ impl Cache {
         }
         Ok(())
     }
+
+    /// The account whose session should be restored on start, if any.
+    pub fn signed_in_account(&self) -> Result<Option<String>, Error> {
+        let conn = self.lock()?;
+        Ok(conn
+            .query_row(
+                "SELECT account_id FROM accounts WHERE signed_in = 1 ORDER BY updated_at DESC LIMIT 1",
+                [],
+                |r| r.get(0),
+            )
+            .optional()?)
+    }
+
+    /// Insert or update an account; marks it the one signed-in account.
+    pub fn upsert_signed_in_account(&self, a: &AccountUpsert<'_>) -> Result<(), Error> {
+        let mut conn = self.lock()?;
+        let tx = conn.transaction()?;
+        tx.execute(
+            "UPDATE accounts SET signed_in = 0 WHERE account_id <> ?1",
+            params![a.account_id],
+        )?;
+        tx.execute(
+            "INSERT INTO accounts (account_id, display_name, email, country, signed_in, updated_at)
+             VALUES (?1, ?2, ?3, ?4, 1, ?5)
+             ON CONFLICT(account_id) DO UPDATE SET
+                 display_name = excluded.display_name,
+                 email = COALESCE(excluded.email, accounts.email),
+                 country = COALESCE(excluded.country, accounts.country),
+                 signed_in = 1,
+                 updated_at = excluded.updated_at",
+            params![a.account_id, a.display_name, a.email, a.country, now_secs()],
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Keep the cached account row (library stays visible) but mark it signed out.
+    pub fn mark_signed_out(&self, account_id: &str) -> Result<(), Error> {
+        let conn = self.lock()?;
+        conn.execute(
+            "UPDATE accounts SET signed_in = 0, updated_at = ?2 WHERE account_id = ?1",
+            params![account_id, now_secs()],
+        )?;
+        Ok(())
+    }
+}
+
+/// Account fields we cache (email/country are optional until account info loads).
+pub struct AccountUpsert<'a> {
+    pub account_id: &'a str,
+    pub display_name: &'a str,
+    pub email: Option<&'a str>,
+    pub country: Option<&'a str>,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn account_sign_in_and_out() {
+        let cache = Cache::open_in_memory().unwrap();
+        assert_eq!(cache.signed_in_account().unwrap(), None);
+        cache
+            .upsert_signed_in_account(&AccountUpsert {
+                account_id: "a1",
+                display_name: "One",
+                email: None,
+                country: None,
+            })
+            .unwrap();
+        cache
+            .upsert_signed_in_account(&AccountUpsert {
+                account_id: "a1",
+                display_name: "One",
+                email: Some("one@example.com"),
+                country: Some("US"),
+            })
+            .unwrap();
+        assert_eq!(cache.signed_in_account().unwrap().as_deref(), Some("a1"));
+        let acct = cache.snapshot().unwrap().account.unwrap();
+        assert_eq!(acct.email.as_deref(), Some("one@example.com"));
+        assert!(acct.signed_in);
+
+        // A second account takes over; the first is no longer signed in.
+        cache
+            .upsert_signed_in_account(&AccountUpsert {
+                account_id: "a2",
+                display_name: "Two",
+                email: None,
+                country: None,
+            })
+            .unwrap();
+        assert_eq!(cache.signed_in_account().unwrap().as_deref(), Some("a2"));
+        cache.mark_signed_out("a2").unwrap();
+        assert_eq!(cache.signed_in_account().unwrap(), None);
+    }
 
     #[test]
     fn mock_snapshot_has_expected_shape() {
@@ -273,7 +365,10 @@ mod tests {
         assert!(snap.recent.len() <= 6);
         assert!(!snap.quick_launch.is_empty());
         assert!(snap.active_download.is_some());
-        assert_eq!(snap.account.as_ref().map(|a| a.signed_in), Some(true));
+        assert!(
+            snap.account.is_none(),
+            "mock data must not create an account"
+        );
         // sorted by title
         let titles: Vec<_> = snap.games.iter().map(|g| g.title.to_lowercase()).collect();
         let mut sorted = titles.clone();

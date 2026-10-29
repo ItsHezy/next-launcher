@@ -15,6 +15,8 @@ pub struct AppState {
     pub cache: Arc<Cache>,
     pub paths: Paths,
     pub bench: bool,
+    /// Benchmarks and screenshot runs: no session restore, no network.
+    pub no_network: bool,
     pub shown: AtomicBool,
 }
 
@@ -57,6 +59,10 @@ pub fn show_main(app: &AppHandle, reason: &str) {
 pub fn app_ready(app: AppHandle, state: State<'_, AppState>, report: FrontendMarks) {
     startup::add_frontend(&report);
     show_main(&app, "first paint");
+    // Network work starts only after the window is visible (ADR 0006).
+    if !state.no_network {
+        crate::auth::start_restore(&app);
+    }
     let marks = startup::snapshot();
     tracing::info!("{}", startup::render(&marks));
     let _ = startup::write_json(&state.paths.logs.join("startup.json"), &marks);

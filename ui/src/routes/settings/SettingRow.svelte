@@ -2,6 +2,7 @@
   import Icon from '../../lib/components/Icon.svelte';
   import Switch from '../../lib/components/Switch.svelte';
   import { library } from '../../lib/state/library.svelte';
+  import { auth } from '../../lib/state/auth.svelte';
   import { ACCENTS, settings } from '../../lib/state/settings.svelte';
   import { router } from '../../lib/state/router.svelte';
   import { comingSoon } from '../../lib/state/ui.svelte';
@@ -14,14 +15,15 @@
     displayName: library.account?.displayName ?? '—',
     email: library.account?.email ?? '—',
     country: library.account?.country ?? '—',
-    balance: wallet.balance,
-    rewards: wallet.rewards,
-    coupons: `${wallet.coupons} available`,
+    balance: wallet.balance ?? '—',
+    rewards: wallet.rewards ?? '—',
+    coupons: wallet.coupons === null ? '—' : `${wallet.coupons} available`,
   });
   const fill = (s: string) => s.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? '');
 
   function run(a: Action) {
     if (a.type === 'goto') router.go('settings', a.section);
+    else if (a.type === 'web' && a.page) void auth.openEpicPage(a.page);
     else if (a.type === 'web') comingSoon(`${a.what} (opens Epic's page, signed in)`, a.phase);
     else comingSoon(a.what, a.phase);
   }

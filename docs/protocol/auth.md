@@ -15,14 +15,14 @@ Crate: `egs-auth`. Host: `account-public-service-prod03.ol.epicgames.com` (`ACCO
 
 ## 1. Login page → authorization code
 
-### 1a. Redirect flow (primary) — [REF] Legendary, community docs; host + redirect API [OBS]
+### 1a. Redirect flow (primary) — **[OBS] live sign-in 2026-10-28**, with PKCE
 
 Open in a dedicated login webview (own WebView2 data directory, see ADR 0002):
 
 ```
 https://www.epicgames.com/id/login?redirectUrl=<urlencoded R>
 R = https://www.epicgames.com/id/api/redirect?clientId=34a02cf8f4414e29b15921876da36f9a&responseType=code
-    [&codeChallenge=<b64url(sha256(verifier))>&codeChallengeMethod=S256]   ← PKCE, [REF] verify in Phase 2
+    &codeChallenge=<b64url(sha256(verifier))>&codeChallengeMethod=S256      ← PKCE, accepted [OBS]
 ```
 
 After sign-in the page navigates to `R`, which responds with JSON (rendered as the document body):
@@ -64,7 +64,7 @@ an undocumented EGL interface that Epic can change.
   credentials or creating persistent device credentials.
 - `POST https://www.epicgames.com/id/api/login` (email+password+captcha): never.
 
-## 2. Token endpoint — [REF], token format [OBS]
+## 2. Token endpoint — [OBS] (authorization_code with `code_verifier`, refresh_token rotation)
 
 `POST https://ACCOUNT/account/api/oauth/token`
 
@@ -154,7 +154,7 @@ After a local sign-out: delete the keyring entry, clear the login/web WebView2 p
 cookies for `*.epicgames.com`, and keep the SQLite library cache (marked "signed out") so the
 UI stays instant. Clear it fully if the user chooses "Remove account data".
 
-## 6. Web session from our token (no second login) — routes [OBS], success path [GUESS]
+## 6. Web session from our token (no second login) — **[OBS] works** (2026-10-28)
 
 Goal: open Epic web pages (account, payment methods, checkout) **already signed in**.
 
@@ -166,10 +166,12 @@ Route A (preferred, one navigation):
    https://www.epicgames.com/id/exchange?exchangeCode=<code>&redirectUrl=<urlencoded target>
 ```
 
-`/id/exchange` exists and serves the identity SPA (HTTP 200). **[OBS]** That it then
-exchanges the code and redirects to `target` is **[GUESS]**, to verify in Phase 2.
+**Verified live:** with the web profile's cookies deleted and only our stored refresh token left,
+Route A opened `accounts.epicgames.com/account/password` already signed in. The SPA redeems the
+code, sets the `www.epicgames.com` session, and `accounts.epicgames.com` completes its own
+`/auth/login` SSO hop silently. This is what the app uses (`auth::open_epic_page`).
 
-Route B (fallback, scripted inside the web window, same origin):
+Route B (fallback, not needed so far; scripted inside the web window, same origin):
 
 ```
 1. GET  https://www.epicgames.com/id/api/csrf                → 204, sets cookie XSRF-TOKEN   [OBS]

@@ -1,10 +1,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod auth;
 mod commands;
 mod console;
 mod logging;
 mod paths;
 mod protocol;
+mod redact;
 mod startup;
 
 use std::path::PathBuf;
@@ -63,21 +65,53 @@ fn parse_args() -> Args {
 }
 
 fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
-    tauri_specta::Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
-        commands::app_ready,
-        commands::bench_report,
-        commands::startup_timeline,
-        commands::get_snapshot,
-        commands::get_settings,
-        commands::set_setting,
-        commands::set_pinned,
-        commands::window_action,
-    ])
+    tauri_specta::Builder::<tauri::Wry>::new()
+        .commands(tauri_specta::collect_commands![
+            commands::app_ready,
+            commands::bench_report,
+            commands::startup_timeline,
+            commands::get_snapshot,
+            commands::get_settings,
+            commands::set_setting,
+            commands::set_pinned,
+            commands::window_action,
+            auth::auth_status,
+            auth::sign_in,
+            auth::sign_out,
+            auth::open_epic_page,
+            auth::open_corrective_action,
+        ])
+        .events(tauri_specta::collect_events![auth::AuthChanged])
 }
 
 struct Boot {
     cache: Arc<Cache>,
     json: String,
+    auth: auth::AuthStatus,
+}
+
+/// What the UI should show about the account before any network call.
+fn initial_auth(cache: &Cache, snapshot: &egs_cache::LibrarySnapshot) -> auth::AuthStatus {
+    match cache.signed_in_account() {
+        Ok(Some(_)) => auth::AuthStatus::Restoring {
+            display_name: snapshot
+                .account
+                .as_ref()
+                .map(|a| a.display_name.clone())
+                .unwrap_or_default(),
+        },
+        _ => auth::AuthStatus::SignedOut { reason: None },
+    }
+}
+
+/// API client with the launcher identity (docs/protocol/README.md "Client identity").
+fn api_client() -> anyhow::Result<egs_api::Client> {
+    let egl_version = std::env::var_os("PROGRAMDATA")
+        .and_then(|p| egs_api::detect_egl_version(std::path::Path::new(&p)))
+        .unwrap_or_else(|| egs_api::DEFAULT_EGL_VERSION.to_owned());
+    let ua = egs_api::launcher_user_agent(&egl_version);
+    tracing::info!(egl_version = %egl_version, "API identity");
+    Ok(egs_api::Client::new(egs_api::ClientConfig::new(ua))?)
 }
 
 /// Open the cache and serialise everything the first paint needs.
@@ -95,10 +129,12 @@ fn boot(
     }
     let snapshot = cache.snapshot()?;
     let settings = commands::settings_map(&cache)?;
+    let auth = initial_auth(&cache, &snapshot);
     startup::mark("snapshot_read");
     let json = serde_json::to_string(&serde_json::json!({
         "snapshot": snapshot,
         "settings": settings,
+        "auth": auth,
         "imgBase": protocol::base_url(),
         "bench": bench,
         "benchScroll": bench_scroll,
@@ -109,6 +145,7 @@ fn boot(
     Ok(Boot {
         cache: Arc::new(cache),
         json,
+        auth,
     })
 }
 
@@ -116,9 +153,11 @@ fn boot(
 fn boot_failed(err: &anyhow::Error) -> anyhow::Result<Boot> {
     tracing::error!(error = %err, "boot failed, starting with an empty in-memory cache");
     let cache = Cache::open_in_memory()?;
+    let auth = auth::AuthStatus::SignedOut { reason: None };
     let json = serde_json::to_string(&serde_json::json!({
         "snapshot": cache.snapshot()?,
         "settings": {},
+        "auth": auth,
         "imgBase": protocol::base_url(),
         "bench": false,
         "benchScroll": false,
@@ -128,6 +167,7 @@ fn boot_failed(err: &anyhow::Error) -> anyhow::Result<Boot> {
     Ok(Boot {
         cache: Arc::new(cache),
         json,
+        auth,
     })
 }
 
@@ -158,6 +198,9 @@ fn main() {
         std::thread::spawn(move || boot(&boot_paths, mock_games, bench, bench_scroll, dev_route));
 
     let specta = specta_builder();
+    let invoke = specta.invoke_handler();
+    // Benchmarks and screenshot runs never touch the network.
+    let no_network = args.bench || args.bench_scroll || args.dev_route.is_some();
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(w) = app.get_webview_window("main") {
@@ -166,7 +209,7 @@ fn main() {
                 let _ = w.set_focus();
             }
         }))
-        .invoke_handler(specta.invoke_handler())
+        .invoke_handler(invoke)
         .register_asynchronous_uri_scheme_protocol(protocol::SCHEME, |ctx, request, responder| {
             let Some(state) = ctx.app_handle().try_state::<AppState>() else {
                 return;
@@ -177,6 +220,7 @@ fn main() {
         })
         .setup(move |app| {
             startup::mark("tauri_setup");
+            specta.mount_events(app);
             let boot = match boot_thread.join() {
                 Ok(Ok(b)) => b,
                 Ok(Err(e)) => boot_failed(&e)?,
@@ -186,8 +230,10 @@ fn main() {
                 cache: boot.cache,
                 paths: paths.clone(),
                 bench,
+                no_network,
                 shown: AtomicBool::new(false),
             });
+            app.manage(auth::AuthState::new(api_client()?, boot.auth));
 
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Next Launcher")

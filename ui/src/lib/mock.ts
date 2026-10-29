@@ -1,10 +1,11 @@
 // UI-only sample data for Phase 1 (wallet, store). Library mock data lives in SQLite.
 // All names are invented; no store data or artwork is used.
 
-export const wallet = {
-  balance: '$12.50',
-  rewards: '$3.84',
-  coupons: 1,
+/** Real balances arrive in Phase 7; until then nothing pretends to be your wallet. */
+export const wallet: { balance: string | null; rewards: string | null; coupons: number | null } = {
+  balance: null,
+  rewards: null,
+  coupons: null,
 };
 
 export interface StoreItem {

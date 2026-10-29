@@ -1,36 +1,40 @@
 <script lang="ts">
+  import type { EpicPage } from '../bindings';
   import { wallet } from '../mock';
+  import { auth } from '../state/auth.svelte';
   import { router } from '../state/router.svelte';
-  import { comingSoon, ui } from '../state/ui.svelte';
+  import { ui } from '../state/ui.svelte';
   import Icon from './Icon.svelte';
 
   let first: HTMLButtonElement;
   $effect(() => first?.focus());
 
-  function web(what: string) {
-    comingSoon(`${what} (signed-in Epic page)`, 7);
+  function web(page: EpicPage) {
+    ui.close();
+    void auth.openEpicPage(page);
   }
 </script>
 
 <div class="menu wallet" role="dialog" aria-label="Wallet">
   <div class="balance">
     <span class="label">Wallet balance</span>
-    <span class="amount">{wallet.balance}</span>
+    <span class="amount">{wallet.balance ?? '—'}</span>
+    {#if wallet.balance === null}<span class="note">Your balance shows here from Phase 7.</span>{/if}
   </div>
   <div class="row">
     <Icon name="sparkle" size={18} />
     <span>Epic Rewards</span>
-    <span class="val">{wallet.rewards}</span>
+    <span class="val">{wallet.rewards ?? '—'}</span>
   </div>
   <div class="actions">
-    <button class="btn btn-primary" bind:this={first} onclick={() => web('Add funds')}>Add funds</button>
-    <button class="btn btn-quiet" onclick={() => web('Redeem card')}>Redeem card</button>
+    <button class="btn btn-primary" bind:this={first} onclick={() => web('wallet')}>Add funds</button>
+    <button class="btn btn-quiet" onclick={() => web('redeem')}>Redeem card</button>
   </div>
   <div class="sep"></div>
-  <button class="link" onclick={() => web('Transaction history')}>
+  <button class="link" onclick={() => web('transactions')}>
     Transaction history <Icon name="external" size={16} />
   </button>
-  <button class="link" onclick={() => web('Payment methods')}>
+  <button class="link" onclick={() => web('paymentMethods')}>
     Payment methods <Icon name="external" size={16} />
   </button>
   <button
@@ -60,6 +64,10 @@
   .label {
     color: var(--text-2);
     font-size: 13px;
+  }
+  .note {
+    color: var(--text-2);
+    font-size: 12.5px;
   }
   .amount {
     font-size: 28px;

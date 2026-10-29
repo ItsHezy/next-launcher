@@ -60,16 +60,10 @@ impl Rng {
     }
 }
 
-/// Insert `count` mock games, a mock account and one running download.
+/// Insert `count` mock games and one running download. (Accounts are real since Phase 2.)
 pub fn seed(tx: &Transaction<'_>, count: usize, now: i64) -> Result<(), Error> {
     let mut rng = Rng(0x9E37_79B9_7F4A_7C15);
     let mut used = std::collections::HashSet::new();
-
-    tx.execute(
-        "INSERT OR REPLACE INTO accounts (account_id, display_name, email, country, signed_in, updated_at)
-         VALUES ('mock-account', 'Player One', 'player@example.com', 'US', 1, ?1)",
-        params![now],
-    )?;
 
     let mut stmt = tx.prepare(
         "INSERT INTO games (app_name, namespace, catalog_item_id, title, developer, install_state,

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { dismiss, menuKeys } from '../../lib/actions';
+  import AuthBanner from '../../lib/components/AuthBanner.svelte';
   import Segmented from '../../lib/components/Segmented.svelte';
   import { library, type Filter, type Game, type Sort } from '../../lib/state/library.svelte';
   import { settings } from '../../lib/state/settings.svelte';
@@ -37,6 +38,7 @@
 </script>
 
 <div class="page" bind:this={scroller} data-scroll="library">
+  <AuthBanner />
   <header class="head">
     <div class="title">
       <h1>Library</h1>

@@ -42,13 +42,23 @@ How each fact was obtained. Raw downloads and probe output live in `research/ref
   library state token/collections/playtime, wallet, fulfillment redeem, platform-service
   product/mapping/category-cards, presence, lightswitch, error-code table.
 
+## Phase 2 live verification (2026-10-28, owner's own account)
+
+| # | Finding | Evidence |
+|---|---|---|
+| L1 | Login page → `/id/api/redirect` → authorization code works in an embedded WebView2 window | owner signed in; app log `signed in` |
+| L2 | Epic accepts PKCE (`codeChallenge` S256 on redirect + `code_verifier` on the token grant) for `launcherAppClient2` | same sign-in used PKCE (default on) |
+| L3 | Refresh token fits one Credential Manager entry (< 2,000 bytes JSON); chunking stays as a safeguard | `cmdkey /list` shows one `<id>.NextLauncher` entry |
+| L4 | Refresh-token restore after restart works; session usable ~1.2 s after launch | app log after relaunch |
+| L5 | Launcher token has 150 permissions incl. resources for account update, token kill, fulfillment, reward, library | `verify?includePerms=true`, resource names only |
+| L6 | No pending `epicgames_tos` agreement for this account | EULA tracking returned 204 |
+| L7 | **Exchange-code bridge works**: with the web profile deleted, `/id/exchange?exchangeCode=…&redirectUrl=accounts.epicgames.com/account/password` opened signed in | owner confirmed; app log `opening signed-in Epic page page=Password` |
+
 ## Open questions (carried into phases)
 
 | Question | Phase |
 |---|---|
-| `/id/exchange` or `POST /id/api/exchange` actually establishes a session, and accounts.epicgames.com SSO completes silently | 2 |
-| PKCE accepted for `launcherAppClient2` | 2 |
-| launcher token permissions: account update, kill OTHERS, wallet, fulfillment | 2 / 7 |
+| exact action bits for account update, kill OTHERS, wallet, fulfillment (resources present, L5) | 7 |
 | real keyImage type set in the library, catalog bulk max ids | 3 |
 | a small free test game the owner owns (Fortnite is unsuitable: huge + anti-cheat) | 4 |
 | store "Featured" source, searchStore filter args, checkout URL format | 6 |

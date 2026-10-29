@@ -10,12 +10,19 @@ Status: Accepted (2026-10-28)
 2. API requests send `UELauncher/<version> Windows/<build>.1.256.64bit`. `<version>` is read from
    the local EGL install's `Launcher.manifest.meta` if present (observed `20.3.6-59512232...`), else
    a bundled default updated with each release. Web views use WebView2's normal UA.
-3. Three isolated WebView2 data directories:
-   - `ui/`: the app UI. Loads only local assets. No remote navigation allowed (navigation handler rejects all non-app URLs).
-   - `login/`: Epic's login page only. The init script that reads `/id/api/redirect` lives here.
-   - `web/`: signed-in Epic pages (account, wallet, store checkout, Fab/UE). Navigation limited to the
-     SSO domains plus the payment providers Epic's checkout redirects to (list built in Phase 6).
+3. Two isolated WebView2 data directories (revised in Phase 2, see below):
+   - `ui/`: the app UI. Loads only local assets.
+   - `web/`: Epic's login page **and** signed-in Epic pages (account, wallet, checkout, Fab/UE).
+     Navigation is limited to `https`. The init script that reads `/id/api/redirect` runs only in
+     the login window and only acts on that one path.
    The UI webview never holds Epic cookies, and remote pages never get Tauri IPC.
+
+## Revision (Phase 2, 2026-10-28)
+
+Login and Epic pages originally had separate profiles. They now share `web/`: the session
+cookie from signing in also serves account pages, and when it expires the exchange-code bridge
+(auth.md §6, verified live) restores it. Sign-out deletes the whole `web/` profile. Both
+windows only ever load Epic's own sites, so separating them bought no real isolation.
 
 ## Why
 

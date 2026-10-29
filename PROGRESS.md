@@ -4,7 +4,7 @@
 
 - [x] **Phase 0: Research** (2026-10-28). Specs in `docs/protocol/`, ledger in `research/notes.md`.
 - [x] **Phase 1: Skeleton and speed** (2026-10-28). Full UI on mock data, measured in `docs/perf.md`.
-- [ ] Phase 2: Auth (**blocked until the owner has reviewed `docs/protocol/web-only.md`**)
+- [x] **Phase 2: Auth** (2026-10-28). Live sign-in, silent restore and signed-in Epic pages verified on the owner's account.
 - [ ] Phase 3: Library
 - [ ] Phase 4: Downloads and installs
 - [ ] Phase 5: Launch
@@ -12,6 +12,27 @@
 - [ ] Phase 7: Settings, wallet, profile menu
 - [ ] Phase 8: Cloud saves
 - [ ] Phase 9: Polish and ship
+
+## Phase 2 summary
+
+What works (verified live on the owner's account):
+- Sign-in on Epic's own page in a separate window, with PKCE. 2FA and captcha stay on Epic's page.
+- Refresh token in Windows Credential Manager (chunked if ever too long); access token in memory only.
+- Silent restore after launch (~1.2 s, after first paint); proactive refresh 5 min before expiry;
+  offline handling keeps the saved session and cached library, retrying with backoff.
+- Sign-out: ends the Epic session, deletes the credential, clears Epic web cookies.
+- **No second login**: Epic account pages open signed in via the exchange-code bridge, verified with
+  all web cookies deleted. Settings → Account/Wallet rows with a known page now open it.
+- Log redaction for tokens, codes, auth headers, launch auth args and emails (unit-tested).
+- `egs-api` (HTTP client, error envelope, retry/backoff, OAuth + account endpoints) and `egs-auth`
+  (PKCE, login callback, keyring store, session) with 20 tests incl. a real Credential Manager round-trip.
+
+Measured: cold 469 ms, warm 485 ms (gap unchanged), idle signed-in 100 MB / 0.01 % CPU, installer 2.84 MiB.
+
+Known gaps:
+- Mock games remain until Phase 3 syncs the real library.
+- Online-status selector, achievements, wallet balance and code redemption wait for Phase 7.
+- Permission *action bits* (update vs read) are checked in Phase 7; resource names are present.
 
 ## Phase 1 summary
 
@@ -48,13 +69,12 @@ Known gaps:
 
 ## Open decisions for the owner
 
-1. **Review `docs/protocol/web-only.md`** before Phase 2 (required by the brief).
-2. **License** (ADR 0001): GPL-3.0-or-later recommended, or MIT.
-3. **Image format** (ADR 0004): store CDN-resized JPEG/WebP as-is instead of transcoding to WebP.
-4. **Warm start**: accept ~460 ms for a fresh process plus near-instant reopen from tray (Phase 9), or
+1. **License** (ADR 0001): GPL-3.0-or-later recommended, or MIT.
+2. **Image format** (ADR 0004): store CDN-resized JPEG/WebP as-is instead of transcoding to WebP.
+3. **Warm start**: accept ~460 ms for a fresh process plus near-instant reopen from tray (Phase 9), or
    spend time on WebView2 flags (risk to scroll smoothness).
-5. **Test game** for Phase 4: a small free game on the owner's account (Fortnite is unsuitable).
-6. **Mockup access**: sign in to claude.ai in the app's browser pane, or share screenshots.
+4. **Test game** for Phase 4: a small free game on the owner's account (Fortnite is unsuitable).
+5. **Mockup access**: sign in to claude.ai in the app's browser pane, or share screenshots.
 
 ## Conventions
 

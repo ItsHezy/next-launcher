@@ -1,7 +1,5 @@
 //! Rotating file logs (Settings → Support → Logs opens this folder).
-//!
-//! Phase 2 adds a redaction layer for tokens, codes and email addresses before
-//! any network code exists.
+//! Every line passes through [`crate::redact`] before it is written.
 
 use std::path::Path;
 use std::sync::OnceLock;
@@ -35,7 +33,7 @@ pub fn init(dir: &Path, debug: bool) {
 
     let _ = fmt()
         .with_env_filter(filter)
-        .with_writer(writer)
+        .with_writer(crate::redact::Redacting(writer))
         .with_ansi(false)
         .with_target(true)
         .try_init();

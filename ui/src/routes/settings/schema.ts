@@ -1,6 +1,7 @@
 // Declarative Settings content (brief section 6). The renderer is generic; a few
 // sections add a custom block (profile card, Manage games, per-game cloud saves, About).
 
+import type { EpicPage } from '../../lib/bindings';
 import type { IconName } from '../../lib/icons';
 import type { SettingsSection } from '../../lib/state/router.svelte';
 import type { SettingKey } from '../../lib/state/settings.svelte';
@@ -19,7 +20,7 @@ export type Row =
 /** What a row does when used. Phase numbers say where the real behaviour lands. */
 export type Action =
   | { type: 'soon'; what: string; phase: number }
-  | { type: 'web'; what: string; phase: number }
+  | { type: 'web'; what: string; phase: number; page?: EpicPage }
   | { type: 'goto'; section: SettingsSection };
 
 export interface Group {
@@ -37,7 +38,8 @@ export interface Section {
   groups: Group[];
 }
 
-const web = (what: string, phase = 7): Action => ({ type: 'web', what, phase });
+/** An Epic page; with `page` it opens signed in now, otherwise it lands in `phase`. */
+const web = (what: string, phase = 7, page?: EpicPage): Action => ({ type: 'web', what, phase, page });
 const soon = (what: string, phase: number): Action => ({ type: 'soon', what, phase });
 
 export const SECTIONS: Section[][] = [
@@ -53,16 +55,16 @@ export const SECTIONS: Section[][] = [
           title: 'Profile',
           rows: [
             { kind: 'value', label: 'Display name', value: '{displayName}', action: soon('Changing your display name', 7) },
-            { kind: 'value', label: 'Email', value: '{email}', action: web('Change email') },
-            { kind: 'value', label: 'Country', value: '{country}', action: web('Change country') },
+            { kind: 'value', label: 'Email', value: '{email}', action: web('Change email', 7, 'accountPersonal') },
+            { kind: 'value', label: 'Country', value: '{country}', action: web('Change country', 7, 'accountPersonal') },
             { kind: 'value', label: 'Communication language', value: 'English', action: soon('Communication language', 7) },
           ],
         },
         {
           title: 'Sign-in & security',
           rows: [
-            { kind: 'web', label: 'Password', desc: 'Change your Epic account password', action: web('Password') },
-            { kind: 'value', label: 'Two-factor authentication', value: 'On', action: web('Two-factor authentication') },
+            { kind: 'web', label: 'Password', desc: 'Change your Epic account password', action: web('Password', 7, 'password') },
+            { kind: 'value', label: 'Two-factor authentication', value: 'On', action: web('Two-factor authentication', 7, 'password') },
             { kind: 'web', label: 'Active sessions', action: web('Active sessions') },
             { kind: 'web', label: 'Sign-in history', action: web('Sign-in history') },
           ],
@@ -70,24 +72,24 @@ export const SECTIONS: Section[][] = [
         {
           title: 'Connected accounts',
           rows: [
-            { kind: 'value', label: 'PlayStation', value: 'Not connected', action: web('Connections') },
-            { kind: 'value', label: 'Xbox', value: 'Connected', action: web('Connections') },
-            { kind: 'value', label: 'Nintendo', value: 'Not connected', action: web('Connections') },
-            { kind: 'value', label: 'Steam', value: 'Not connected', action: web('Connections') },
-            { kind: 'value', label: 'Discord', value: 'Not connected', action: web('Connections') },
+            { kind: 'value', label: 'PlayStation', value: 'Not connected', action: web('Connections', 7, 'connections') },
+            { kind: 'value', label: 'Xbox', value: 'Connected', action: web('Connections', 7, 'connections') },
+            { kind: 'value', label: 'Nintendo', value: 'Not connected', action: web('Connections', 7, 'connections') },
+            { kind: 'value', label: 'Steam', value: 'Not connected', action: web('Connections', 7, 'connections') },
+            { kind: 'value', label: 'Discord', value: 'Not connected', action: web('Connections', 7, 'connections') },
           ],
         },
         {
           title: 'Privacy',
           rows: [
-            { kind: 'web', label: 'Privacy settings', desc: 'Who can find you, see your activity and send requests', action: web('Privacy settings') },
-            { kind: 'web', label: 'Download my data', action: web('Download my data') },
+            { kind: 'web', label: 'Privacy settings', desc: 'Who can find you, see your activity and send requests', action: web('Privacy settings', 7, 'privacy') },
+            { kind: 'web', label: 'Download my data', action: web('Download my data', 7, 'privacy') },
           ],
         },
         {
           rows: [
             { kind: 'button', label: 'Sign out of all devices', desc: 'Ends every session except this one', button: 'Sign out everywhere', action: soon('Signing out of other devices', 7) },
-            { kind: 'danger', label: 'Delete account', desc: "Opens Epic's account deletion page", button: 'Delete account…', action: web('Account deletion') },
+            { kind: 'danger', label: 'Delete account', desc: "Opens Epic's account deletion page", button: 'Delete account…', action: web('Account deletion', 7, 'accountPersonal') },
           ],
         },
       ],
@@ -101,19 +103,19 @@ export const SECTIONS: Section[][] = [
         {
           title: 'Balance',
           rows: [
-            { kind: 'value', label: 'Wallet balance', value: '{balance}', action: web('Wallet') },
+            { kind: 'value', label: 'Wallet balance', value: '{balance}', action: web('Wallet', 7, 'wallet') },
             { kind: 'value', label: 'Epic Rewards', value: '{rewards}', action: web('Epic Rewards') },
-            { kind: 'button', label: 'Add funds', button: 'Add funds', action: web('Add funds') },
-            { kind: 'button', label: 'Redeem gift card', desc: 'Epic Games and Fortnite gift cards', button: 'Redeem', action: web('Redeem gift card') },
+            { kind: 'button', label: 'Add funds', button: 'Add funds', action: web('Add funds', 7, 'wallet') },
+            { kind: 'button', label: 'Redeem gift card', desc: 'Epic Games and Fortnite gift cards', button: 'Redeem', action: web('Redeem gift card', 7, 'redeem') },
             { kind: 'button', label: 'Redeem code', button: 'Enter code', action: soon('Redeeming codes', 7) },
           ],
         },
         {
           title: 'History & payments',
           rows: [
-            { kind: 'web', label: 'Transaction history', action: web('Transaction history') },
-            { kind: 'web', label: 'Payment methods', action: web('Payment methods') },
-            { kind: 'web', label: 'Refund requests', action: web('Refund requests') },
+            { kind: 'web', label: 'Transaction history', action: web('Transaction history', 7, 'transactions') },
+            { kind: 'web', label: 'Payment methods', action: web('Payment methods', 7, 'paymentMethods') },
+            { kind: 'web', label: 'Refund requests', action: web('Refund requests', 7, 'transactions') },
             { kind: 'web', label: 'Gifts', action: web('Gifts') },
             { kind: 'value', label: 'Coupons', value: '{coupons}', action: web('Coupons') },
           ],

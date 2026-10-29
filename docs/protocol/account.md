@@ -73,8 +73,8 @@ website client, using SSO from the `www.epicgames.com/id` session. So the bridge
 
 1. establish the id session (auth.md §6),
 2. navigate to `https://accounts.epicgames.com/account/<page>`,
-3. its `/auth/login` hop completes silently via SSO. **[GUESS]** This must be verified in Phase 2.
-   If it prompts for a password, that is a blocker to report, not to work around.
+3. its `/auth/login` hop completes silently via SSO. **[OBS]** Verified 2026-10-28 with an
+   empty web profile: `/account/password` opened signed in.
 
 All `/account/*` routes redirect to login when signed out, even made-up ones, so
 which page paths exist can only be confirmed once signed in (Phase 7). Paths below are

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { menuKeys } from '../actions';
-  import { library } from '../state/library.svelte';
+  import { auth } from '../state/auth.svelte';
   import { router, type SettingsSection } from '../state/router.svelte';
   import { comingSoon, ui } from '../state/ui.svelte';
   import type { IconName } from '../icons';
@@ -8,7 +8,7 @@
   import Icon from './Icon.svelte';
 
   let status = $state<'online' | 'away' | 'invisible'>('online');
-  const name = $derived(library.account?.displayName ?? 'Not signed in');
+  const name = $derived(auth.displayName || 'Epic account');
 
   function open(section: SettingsSection) {
     ui.close();
@@ -34,7 +34,17 @@
       { icon: 'help', label: 'Help & support', run: () => open('support') },
       { icon: 'document', label: 'Legal & policies', run: () => open('legal') },
     ],
-    [{ icon: 'logout', label: 'Sign out', danger: true, run: () => comingSoon('Sign-in and sign-out', 2) }],
+    [
+      {
+        icon: 'logout',
+        label: 'Sign out',
+        danger: true,
+        run: () => {
+          ui.close();
+          void auth.signOut();
+        },
+      },
+    ],
   ];
 </script>
 

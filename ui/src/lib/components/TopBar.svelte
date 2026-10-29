@@ -1,6 +1,7 @@
 <script lang="ts">
   import { dismiss } from '../actions';
   import { wallet } from '../mock';
+  import { auth } from '../state/auth.svelte';
   import { library } from '../state/library.svelte';
   import { router, type Route } from '../state/router.svelte';
   import { comingSoon, ui } from '../state/ui.svelte';
@@ -23,7 +24,7 @@
   let walletBtn = $state<HTMLButtonElement>();
   let profileBtn = $state<HTMLButtonElement>();
 
-  const name = $derived(library.account?.displayName ?? 'Guest');
+  const name = $derived(auth.displayName || 'Epic account');
 
   function openSearch() {
     searching = true;
@@ -68,17 +69,18 @@
     <button class="icon-btn" aria-label="Wishlist" onclick={() => comingSoon('Wishlist', 6)}><Icon name="heart" /></button>
     <button class="icon-btn" aria-label="Cart" onclick={() => comingSoon('Cart', 6)}><Icon name="cart" /></button>
 
+    {#if auth.hasAccount}
     <div class="anchor">
       <button
         bind:this={walletBtn}
         class="wallet-btn"
         aria-haspopup="dialog"
         aria-expanded={ui.popover === 'wallet'}
-        aria-label="Wallet, balance {wallet.balance}"
+        aria-label={wallet.balance ? `Wallet, balance ${wallet.balance}` : 'Wallet'}
         onclick={() => ui.toggle('wallet')}
       >
         <Icon name="wallet" size={18} />
-        <span>{wallet.balance}</span>
+        <span>{wallet.balance ?? 'Wallet'}</span>
       </button>
       {#if ui.popover === 'wallet'}
         <div use:dismiss={{ onclose: () => ui.close(), trigger: () => walletBtn }}>
@@ -86,6 +88,7 @@
         </div>
       {/if}
     </div>
+    {/if}
 
     <span class="divider" aria-hidden="true"></span>
 
@@ -98,23 +101,32 @@
       <Icon name="gear" />
     </button>
 
-    <div class="anchor">
-      <button
-        bind:this={profileBtn}
-        class="avatar-btn"
-        aria-haspopup="menu"
-        aria-expanded={ui.popover === 'profile'}
-        aria-label="Profile menu for {name}"
-        onclick={() => ui.toggle('profile')}
-      >
-        <Avatar {name} size={34} />
+    {#if auth.hasAccount}
+      <div class="anchor">
+        <button
+          bind:this={profileBtn}
+          class="avatar-btn"
+          aria-haspopup="menu"
+          aria-expanded={ui.popover === 'profile'}
+          aria-label="Profile menu for {name}"
+          onclick={() => ui.toggle('profile')}
+        >
+          <Avatar {name} size={34} />
+          {#if auth.status.state === 'offline' || auth.status.state === 'needsAction'}
+            <span class="badge" aria-hidden="true"></span>
+          {/if}
+        </button>
+        {#if ui.popover === 'profile'}
+          <div use:dismiss={{ onclose: () => ui.close(), trigger: () => profileBtn }}>
+            <ProfileMenu />
+          </div>
+        {/if}
+      </div>
+    {:else}
+      <button class="btn btn-primary sign-in" disabled={auth.status.state === 'signingIn'} onclick={() => auth.signIn()}>
+        {auth.status.state === 'signingIn' ? 'Signing in…' : 'Sign in'}
       </button>
-      {#if ui.popover === 'profile'}
-        <div use:dismiss={{ onclose: () => ui.close(), trigger: () => profileBtn }}>
-          <ProfileMenu />
-        </div>
-      {/if}
-    </div>
+    {/if}
 
     <span class="divider" aria-hidden="true"></span>
     <WindowControls />
@@ -190,9 +202,27 @@
     background: var(--border);
   }
   .avatar-btn {
+    position: relative;
     display: grid;
     place-items: center;
     width: var(--hit);
     border-radius: 50%;
+  }
+  .badge {
+    position: absolute;
+    right: 4px;
+    top: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--warning);
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+  .sign-in {
+    margin-left: 4px;
+    padding: 0 20px;
+  }
+  .sign-in:disabled {
+    opacity: 0.7;
   }
 </style>

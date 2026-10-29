@@ -8,6 +8,20 @@ AMD Ryzen 5 5600X (6C/12T), 32 GB RAM, NVMe SSD, RTX 3060 Ti, 200 Hz display, Wi
 10.0.26200, WebView2 runtime 156.0.4314.50. That's upper mid-range; numbers on a true mid-range PC
 will be somewhat higher.
 
+## Phase 2 (2026-10-28): auth
+
+Network starts only after the window is shown, so startup is unchanged within run-to-run noise.
+
+| Metric | Budget | Phase 1 | Phase 2 |
+|---|---|---|---|
+| Cold start (fresh profile, median of 7) | ≤ 1.0 s | 474 ms | **469 ms** ✅ |
+| Warm start (median of 7) | ≤ 400 ms | 458 ms | **485 ms** ❌ (same gap; noise ±30 ms) |
+| Idle RAM, signed in, refresh timer armed | ≤ 150 MB | 92–96 MB (no account) | **100.1 MB** ✅ |
+| Idle CPU, signed in | ~0 % | 0.01–0.03 % | **0.01 %** ✅ |
+| Release exe | | 5.56 MiB | 7.20 MiB (+reqwest, rustls/ring, keyring) |
+| Installer (NSIS) | ≤ 15 MB | 2.07 MiB | **2.84 MiB** ✅ |
+| Session restore after launch (refresh + verified call) | | | ~1.2 s, in background |
+
 ## Phase 1 (2026-10-28): skeleton on mock data
 
 Release build (`npx tauri build`), 48 mock games unless noted.
