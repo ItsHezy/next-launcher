@@ -73,7 +73,7 @@ host's error rate is tracked; a host above 20% failures is demoted for the rest 
    ("Ticket has expired"). Signed URLs are themselves time-limited, so never persist them
    for resume. Re-sign after a restart.
 
-## 3. Download engine (Phase 4 design summary)
+## 3. Download engine (as built in Phase 4)
 
 Planning, from the old manifest (if updating), the new manifest and the selected install tags:
 
@@ -83,23 +83,31 @@ Planning, from the old manifest (if updating), the new manifest and the selected
    instead of downloaded.
 3. Reference-count chunks across all files to download. Order files so files sharing
    chunks are adjacent, which minimises the in-memory chunk cache. Simulate the job to compute
-   the peak cache. Cap it with a memory limit (default 256 MiB, much lower than Legendary's 1 GiB).
-   Chunks that don't fit are evicted and re-fetched when needed again (counted in the estimate).
+   the peak cache. Cap it with a memory limit (default 256 MiB, much lower than Legendary's 1 GiB;
+   setting `downloads.cacheSizeMb`). Chunks that don't fit are evicted and re-fetched when needed
+   again (counted in the estimate). The planner looks 256 chunk parts ahead when ordering fetches.
 4. Disk space required = sum(new sizes of added/changed files) − sum(old sizes of changed/removed files)
    + largest single changed file (temp copy). Check free space on the target volume before
    starting. Block with a clear message if short.
 
 Execution:
 
-- N download workers (default 16), with a global token bucket for the speed limit (`governor`).
+- 16 download workers, with a global token bucket for the speed limit (our own `Limiter`, no
+  extra dependency; Settings → Downloads "Download limit" applies live). The dispatcher reserves
+  chunk-cache memory in fetch order, so a full cache can't deadlock the workers.
 - Each chunk: download → (decrypt) → inflate → SHA-1 verify → cache.
 - One writer task assembles files in order into `<file>.nl-tmp` and fsyncs. When a file completes,
   it checks the file SHA-1 and does an atomic rename over the target. Executable bits and read-only flags are
   ignored on Windows.
-- **Resume**: `downloads` table rows hold the job's manifest hash and per-file completion
-  (file name + SHA-1 verified). On restart, completed files are skipped and partially written
-  `.nl-tmp` files are discarded (simpler and safe). Chunks are never cached on disk across
-  restarts in v1.
+- **Resume**: the `downloads` row holds the job (kind, folder, build, tags) and the
+  `download_files` table records each file whose SHA-1 was verified and renamed into place. On
+  restart the job that was `running` is picked up first, completed files are skipped and
+  partially written `.nl-tmp` files are discarded (simpler and safe). Chunks are never cached on
+  disk across restarts in v1.
+- **Updates and repairs are staged**: new files are written under `<install>/.nl-staging/` and
+  moved over the old ones only after every file has been written and checked
+  (`commit_staged`), so a cancelled or failed update leaves the old build intact and launchable.
+  Repair verifies first, then downloads only the damaged or missing files (no reuse from them).
 - Pause = stop handing out chunk tasks and let in-flight ones finish. Cancel = pause plus delete
   `.nl-tmp` files. A cancelled *update* leaves the old install intact and launchable.
 - Removed files are deleted only after every changed/added file has committed.
@@ -109,17 +117,20 @@ Execution:
 Verify: for every file in the manifest (respecting install tags), compare size and SHA-1.
 Missing, wrong size or hash mismatch ⇒ repair list. Repair = run the engine with only those
 files as "changed" and no reuse from the broken copies. Hashing is streamed (`sha1` crate),
-bounded parallelism (2 files at once on HDD, 4 on SSD), and shows progress.
+bounded parallelism (2 files at once; SSD detection for 4 is not built yet), and shows progress.
 
 ## 5. Install metadata we keep per game
 
-`games` row: install path, build version, manifest hash, selected install tags, secrets
-(only if encrypted; stored in a separate keyring entry if large values allow, otherwise in an
-ACL-restricted file next to the DB), base URLs, prerequisites info, `can_run_offline`,
-`requires_ownership_token`. A copy of the raw manifest goes in
-`%LOCALAPPDATA%\NextLauncher\manifests\<appName>\<build>.manifest` (needed for updates/verify/uninstall).
+`games` row: install path, build version, selected install tags, `egl_managed`, `needs_verify`.
+A copy of Epic's raw manifest goes in
+`%LOCALAPPDATA%\NextLauncher\manifests\<appName>\<build>.manifest` (needed for updates, verify,
+uninstall and cancel clean-up). For encrypted builds the content keys from `secrets` go beside it
+as `<build>.secrets.json` in the same per-user folder, because our manifest writer can't produce a
+decrypted feature level 22+ copy and verify must work offline. They are never logged and are
+removed with the manifest copy. Prerequisite info, `can_run_offline` and
+`requires_ownership_token` come with Phase 5.
 
-## 6. Prerequisites — [REF]
+## 6. Prerequisites — [REF] (not built yet: Phase 5)
 
 Manifest meta `prereq_ids/prereq_name/prereq_path/prereq_args` describe an installer
 (typically a VC++ redistributable) shipped inside the game folder. EGL runs it after install.
@@ -129,10 +140,38 @@ silently elevate.
 
 ## 7. Uninstall and move
 
-- Uninstall: if the manifest has `uninstall_action_path`, run it first (ask). Then delete exactly
-  the files listed in the manifest plus empty directories, never the whole folder blindly.
-  Delete our manifest copy last.
-- Move: copy files (verified) to the new location, update `install_path`, then delete the old
-  copy. Same-volume moves use rename.
+- Uninstall: delete exactly the files listed in the manifest plus empty directories, never the
+  whole folder blindly; files the game wrote itself stay. Delete our manifest copy last.
+  Running `uninstall_action_path` (feature level 21+) first is not built yet.
+- Move (as built): the *whole* folder moves, including files the game wrote next to itself
+  (configs, saves), because the user asked to move the game, not its file list.
+  - Same drive: one rename.
+  - Another drive: check free space (size + 1 GiB), copy every file with a 4 MiB buffer, check
+    each copy's size, keep timestamps and read-only flags, flush it, and only then delete the
+    old folder. If anything fails or the user cancels before that delete, the partial copy is
+    removed and the old folder is untouched. Old files still in use after the copy are left
+    behind and reported.
+  - Refused: a target that already has files in it, a target inside the old folder (or the
+    reverse), folders containing links or junctions, and any game with a queued, running or
+    paused download. While a move runs, update, repair, verify and uninstall are refused.
+  - Afterwards `install_path` points to the new folder and an adopted install is no longer
+    marked as shared with EGL (EGL's own records are not touched, so it will report the game
+    missing).
 - **Never** run either on an install we adopted from EGL without an explicit confirmation
-  that names the folder (section 1 of the brief).
+  that names the folder (section 1 of the brief). Both dialogs ask a second time for those.
+
+## 8. Phase 4 live check (2026-10-29, owner's account)
+
+- 34 installable owned games probed (manifests only, no game data): feature levels 17 (16
+  games), 21 (13) and 13 (5). **None use signed URLs and none are encrypted**, so §2 "Signed"
+  and the decryption paths are covered by unit tests only. One game (Fortnite) has optional
+  components (2).
+- Test game *while True: learn()*: feature level 13 (`ChunksV3`), 153 files, 153 MB download
+  for 887 MB installed. Install: 816 chunk fetches in 21 s (~7 MB/s), peak chunk cache 16 MB.
+- Verify: 153 files in 355–371 ms. One flipped byte was caught (`WrongHash`); repair fetched 5
+  chunks (~1 MB) for that one file through the staging folder; a second verify found 0 problems.
+- Resume: the app was force-killed 7 s into the install (141 of 153 files done, one partial
+  `.nl-tmp`). On the next normal start the job resumed by itself with 12 files / 106 MB left,
+  finished in 12 s, and verify found 0 problems.
+- Move: same-drive moves into a sub-folder and back were single renames (2 ms); a target outside
+  the development root was refused before anything was touched.

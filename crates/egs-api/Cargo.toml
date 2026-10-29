@@ -26,6 +26,7 @@ thiserror.workspace = true
 tracing.workspace = true
 tokio = { version = "1", features = ["time"] }
 fastrand = "2"
+sha1 = "0.10"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }

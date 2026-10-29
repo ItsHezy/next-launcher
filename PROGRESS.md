@@ -6,12 +6,45 @@
 - [x] **Phase 1: Skeleton and speed** (2026-10-28). Full UI on mock data, measured in `docs/perf.md`.
 - [x] **Phase 2: Auth** (2026-10-28). Live sign-in, silent restore and signed-in Epic pages verified on the owner's account.
 - [x] **Phase 3: Library** (2026-10-29). Real library synced live (35 games + 3 DLC, real covers); EGL import built, live adoption awaits the owner.
-- [ ] Phase 4: Downloads and installs
+- [x] **Phase 4: Downloads and installs** (2026-10-29). Live install, verify, repair, move and resume of a small free game into `test-installs/`.
 - [ ] Phase 5: Launch
 - [ ] Phase 6: Store
 - [ ] Phase 7: Settings, wallet, profile menu
 - [ ] Phase 8: Cloud saves
 - [ ] Phase 9: Polish and ship
+
+## Phase 4 summary
+
+What works (verified live on the owner's account, test game *while True: learn()*, into
+`test-installs/` with the development guard on):
+- Install: Epic's build info and manifest (SHA-1 checked, CDN fallback), install size and free
+  space shown first, optional components from Epic's selective-download data. 153 files /
+  153 MB in 21 s with a 16 MB peak chunk cache. Progress, speed and time left in the sidebar card.
+- Engine (`egs-download`): parallel chunk downloads across Epic's CDNs, zlib, AES for encrypted
+  builds, SHA-1 on every chunk and file, atomic `.nl-tmp` → rename, pause / resume / cancel,
+  live speed limit, chunk reuse and diffing for updates.
+- Resume after the app is killed mid-download: finished files are skipped on the next start.
+- Verify and repair: one flipped byte found in 0.36 s over 153 files; repair re-downloaded only
+  that file (5 chunks) through a staging folder; re-verify clean.
+- Updates and repairs are staged, so a cancelled update leaves the old build playable.
+- Uninstall removes only the game's own files. Move: instant on the same drive; across drives
+  copy → check → delete, with cancel and progress. Both ask twice for folders shared with the
+  official launcher.
+- Manifest parser for binary and JSON manifests at every feature level, plus the chunk format;
+  Fortnite's 151,991-chunk manifest parses in 38 ms.
+- 77 Rust tests (16 api, 10 auth, 13 cache, 17 download, 3 import, 9 manifest + 1 opt-in test on
+  a real manifest, 9 app).
+
+Measured: cold 416 ms, warm 406 ms (unchanged, at the 400 ms line), idle 108.6 MB / 0.01 % CPU
+with a game installed, installer 3.10 MiB. Details in `docs/perf.md`.
+
+Known gaps:
+- None of the owner's 34 installable games use signed CDN URLs or encryption, so those paths
+  are unit-tested only. Cross-drive move is unit-tested only (the only other drive holds real games).
+- Pause, resume and cancel from the download card are unit-tested in the engine, not clicked
+  through live (resume after a forced kill was tested live).
+- Prerequisite installers and the manifest's uninstall action wait for Phase 5.
+- Live adoption of the owner's Fortnite install (Phase 3) still awaits the owner.
 
 ## Phase 3 summary
 
@@ -97,8 +130,7 @@ Known gaps:
 2. **Image format** (ADR 0004): store CDN-resized JPEG/WebP as-is instead of transcoding to WebP.
 3. **Warm start**: now ~370–410 ms (at the 400 ms line). Options unchanged: accept plus tray reopen
    (Phase 9), or try WebView2 flags (risk to scroll smoothness).
-4. **Test game** for Phase 4: a small free game on the owner's account (Fortnite is unsuitable).
-5. **Mockup access**: sign in to claude.ai in the app's browser pane, or share screenshots.
+4. **Mockup access**: sign in to claude.ai in the app's browser pane, or share screenshots.
 
 ## Conventions
 

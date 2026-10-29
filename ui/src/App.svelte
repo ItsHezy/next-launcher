@@ -81,6 +81,18 @@
     {#await import('./lib/components/ImportDialog.svelte') then { default: ImportDialog }}
       <ImportDialog />
     {/await}
+  {:else if ui.dialog?.kind === 'install'}
+    {#await import('./lib/components/InstallDialog.svelte') then { default: InstallDialog }}
+      <InstallDialog appName={ui.dialog.appName} />
+    {/await}
+  {:else if ui.dialog?.kind === 'uninstall'}
+    {#await import('./lib/components/UninstallDialog.svelte') then { default: UninstallDialog }}
+      <UninstallDialog appName={ui.dialog.appName} />
+    {/await}
+  {:else if ui.dialog?.kind === 'move'}
+    {#await import('./lib/components/MoveDialog.svelte') then { default: MoveDialog }}
+      <MoveDialog appName={ui.dialog.appName} />
+    {/await}
   {/if}
 
   {#if boot.bootError}

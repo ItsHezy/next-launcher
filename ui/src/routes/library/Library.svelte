@@ -2,6 +2,7 @@
   import { dismiss, menuKeys } from '../../lib/actions';
   import AuthBanner from '../../lib/components/AuthBanner.svelte';
   import Icon from '../../lib/components/Icon.svelte';
+  import * as actions from '../../lib/gameActions';
   import { ago } from '../../lib/format';
   import { auth } from '../../lib/state/auth.svelte';
   import Segmented from '../../lib/components/Segmented.svelte';
@@ -26,7 +27,7 @@
 
   function play(g: Game) {
     if (g.state === 'notInstalled' && g.thirdParty) comingSoon(`Opening ${g.thirdParty}`, 5);
-    else if (g.state === 'notInstalled') comingSoon('Installing games', 4);
+    else if (g.state === 'notInstalled') actions.install(g.appName);
     else comingSoon('Launching games', 5);
   }
 
@@ -47,12 +48,13 @@
 
   function openMenu(game: Game, x: number, y: number) {
     // Keyboard context-menu key reports 0,0: anchor to the focused element.
+    // Clamp so the tallest menu (5 items) stays on screen.
     if (x === 0 && y === 0 && document.activeElement instanceof HTMLElement) {
       const r = document.activeElement.getBoundingClientRect();
       x = r.left;
       y = r.bottom;
     }
-    menu = { game, x: Math.min(x, window.innerWidth - 240), y: Math.min(y, window.innerHeight - 120) };
+    menu = { game, x: Math.min(x, window.innerWidth - 240), y: Math.min(y, window.innerHeight - 240) };
   }
 </script>
 
@@ -140,7 +142,16 @@
     >
       {g.pinned ? 'Remove from Quick Launch' : 'Add to Quick Launch'}
     </button>
-    <button role="menuitem" onclick={() => ((menu = null), comingSoon('Game management', 4))}>Manage…</button>
+    {#if g.state === 'updateAvailable'}
+      <button role="menuitem" onclick={() => ((menu = null), actions.update(g.appName, g.title))}>Update now</button>
+    {/if}
+    {#if g.state === 'installed' || g.state === 'updateAvailable'}
+      <button role="menuitem" onclick={() => ((menu = null), actions.verifyAndRepair(g.appName, g.title))}>Verify files</button>
+      <button role="menuitem" onclick={() => ((menu = null), actions.move(g.appName))}>Move…</button>
+      <button role="menuitem" class="danger" onclick={() => ((menu = null), actions.uninstall(g.appName))}>Uninstall…</button>
+    {:else if g.state === 'notInstalled' && g.installable}
+      <button role="menuitem" onclick={() => ((menu = null), actions.install(g.appName))}>Install…</button>
+    {/if}
   </div>
 {/if}
 
@@ -230,6 +241,9 @@
     padding: 0 12px;
     border-radius: var(--radius-sm);
     text-align: left;
+  }
+  .ctx .danger {
+    color: var(--danger);
   }
   .ctx button:hover,
   .ctx button:focus-visible {

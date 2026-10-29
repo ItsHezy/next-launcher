@@ -314,6 +314,8 @@ async fn after_sign_in(app: AppHandle, acct: AccountSummary, epoch: u64) {
     // Library sync uses the account's country for catalog data, so it starts now.
     if auth.epoch.load(Ordering::SeqCst) == epoch {
         crate::library::sync_soon(&app);
+        // Downloads interrupted by closing the app continue (they need the session).
+        crate::install::kick(&app);
     }
 
     // Phase 2 verification: which Phase 7 features the launcher token may use.

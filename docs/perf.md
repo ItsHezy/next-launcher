@@ -8,6 +8,29 @@ AMD Ryzen 5 5600X (6C/12T), 32 GB RAM, NVMe SSD, RTX 3060 Ti, 200 Hz display, Wi
 10.0.26200, WebView2 runtime 156.0.4314.50. That's upper mid-range; numbers on a true mid-range PC
 will be somewhat higher.
 
+## Phase 4 (2026-10-29): downloads and installs
+
+Test game *while True: learn()* (feature level 13, 153 files, 153 MB download, 887 MB installed)
+into `test-installs/`, home connection, release build.
+
+| Metric | Budget | Measured |
+|---|---|---|
+| Warm start, standard bench (48 mock games), median of 7 | ≤ 400 ms | **406 ms** (min 403) ≈ at the line, unchanged |
+| Cold start, standard bench, median of 7 | ≤ 1.0 s | **416 ms** ✅ |
+| Idle RAM, signed in, one game installed | ≤ 150 MB | **108.6 MB** ✅ |
+| Idle CPU | ~0 % | **0.01 %** ✅ |
+| Installer (NSIS) | ≤ 15 MB | **3.10 MiB** ✅ (exe 8.0 MiB) |
+| Initial / total JS (gz) | 80 / 250 KB | 35.1 / 53.1 KB ✅ (install, uninstall, move dialogs lazy) |
+| Full install: 816 chunk fetches | | 21 s (~7 MB/s), peak chunk cache 16 MB |
+| Resume after a forced kill 7 s in (141 of 153 files done) | | 12 files / 106 MB left, 12 s; partial `.nl-tmp` discarded |
+| Verify, 153 files / 887 MB | | 334–371 ms (warm file cache) |
+| Repair of one damaged file | | 5 chunks, ~1 MB, < 1 s, staged |
+| Move, same drive | | 2 ms (one rename) |
+| Manifest parse, Fortnite (151,991 chunks, 891 files) | | 38 ms |
+
+Not measured yet: RAM while downloading, and throughput on a link faster than this one (the
+engine ran 16 workers; the connection's own speed wasn't measured separately).
+
 ## Phase 3 (2026-10-29): library sync
 
 | Metric | Budget | Measured |

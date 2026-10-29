@@ -17,6 +17,10 @@ pub struct AppState {
     pub bench: bool,
     /// Benchmarks and screenshot runs: no session restore, no network.
     pub no_network: bool,
+    /// Dev tooling (`--dev-probe-sizes`).
+    pub dev_probe_sizes: bool,
+    /// Dev tooling (`--dev-action <action>:<app>`).
+    pub dev_action: Option<String>,
     pub shown: AtomicBool,
 }
 
@@ -164,6 +168,14 @@ impl SettingValue {
     }
 }
 
+/// One stored setting as text (numbers formatted), if set.
+pub fn settings_value(cache: &Cache, key: &str) -> Option<String> {
+    cache.settings().ok()?.get(key).map(|v| match v {
+        serde_json::Value::String(s) => s.clone(),
+        other => other.to_string(),
+    })
+}
+
 pub fn settings_map(cache: &Cache) -> Result<BTreeMap<String, SettingValue>, egs_cache::Error> {
     Ok(cache
         .settings()?
@@ -184,8 +196,13 @@ pub fn set_setting(
     state: State<'_, AppState>,
     key: String,
     value: SettingValue,
+    app: AppHandle,
 ) -> Result<(), UiError> {
-    Ok(state.cache.set_setting(&key, &value.to_json())?)
+    state.cache.set_setting(&key, &value.to_json())?;
+    if key == "downloads.limitMbps" {
+        crate::install::apply_speed_limit(&app);
+    }
+    Ok(())
 }
 
 #[tauri::command]

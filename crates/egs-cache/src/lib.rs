@@ -4,6 +4,7 @@
 //! No Tauri dependency. All state that must survive a restart lives here (or in
 //! the OS keyring for secrets).
 
+mod downloads;
 mod migrations;
 mod mock;
 pub mod model;
@@ -16,6 +17,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{params, Connection, OptionalExtension};
 
+pub use downloads::{DownloadJob, GameInstall};
 pub use migrations::LATEST as SCHEMA_VERSION;
 pub use model::*;
 pub use sync::{Adopt, CatalogFields, GameUpsert, KnownGame, PendingImage, SyncDiff};

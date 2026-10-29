@@ -6,6 +6,7 @@ import {
   type DownloadRow,
   type AccountRow_Serialize,
   type SyncStatus,
+  type DownloadProgress,
   type LibrarySnapshot_Serialize,
 } from '../bindings';
 
@@ -47,6 +48,8 @@ class LibraryState {
   filter = $state<Filter>('all');
   query = $state('');
   sync = $state.raw<SyncStatus>({ syncing: false, error: null, lastSync: null });
+  /** Live progress of the running download (events, ~4/s). */
+  progress = $state.raw<DownloadProgress | null>(null);
 
   byId = $derived(new Map(this.games.map((g) => [g.appName, g])));
 
@@ -116,6 +119,7 @@ class LibraryState {
       timer = setTimeout(() => void this.reload(), 150);
     });
     await events.syncStatusChanged.listen((e) => (this.sync = e.payload));
+    await events.downloadProgress.listen((e) => (this.progress = e.payload));
     this.sync = await commands.syncStatus();
   }
 

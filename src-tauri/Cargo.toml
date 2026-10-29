@@ -16,6 +16,8 @@ egs-cache = { path = "../crates/egs-cache", features = ["specta"] }
 egs-api = { path = "../crates/egs-api" }
 egs-auth = { path = "../crates/egs-auth" }
 egs-import = { path = "../crates/egs-import" }
+egs-manifest = { path = "../crates/egs-manifest" }
+egs-download = { path = "../crates/egs-download" }
 tokio = { version = "1", features = ["rt", "time", "sync"] }
 tauri = { version = "2.12", features = [] }
 tauri-plugin-single-instance = "2.5"
@@ -32,7 +34,7 @@ tracing-appender = "0.2"
 regex-lite = "0.1"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_System_Console"] }
+windows-sys = { version = "0.61", features = ["Win32_System_Console", "Win32_Storage_FileSystem"] }
 
 [lints]
 workspace = true

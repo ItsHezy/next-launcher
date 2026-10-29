@@ -115,6 +115,20 @@ const MIGRATIONS: &[&str] = &[
         last_full_at   INTEGER
     );
     "#,
+    // v3: downloads that survive restarts (Phase 4).
+    r#"
+    ALTER TABLE downloads ADD COLUMN owner          TEXT;
+    ALTER TABLE downloads ADD COLUMN install_path   TEXT;
+    ALTER TABLE downloads ADD COLUMN build_version  TEXT;
+    ALTER TABLE downloads ADD COLUMN tags           TEXT;     -- JSON array of install tags
+    ALTER TABLE games     ADD COLUMN install_tags   TEXT;     -- JSON array, selected components
+
+    CREATE TABLE download_files (
+        download_id INTEGER NOT NULL REFERENCES downloads(id) ON DELETE CASCADE,
+        filename    TEXT NOT NULL,
+        PRIMARY KEY (download_id, filename)
+    ) WITHOUT ROWID;
+    "#,
 ];
 
 /// Latest schema version this build understands.

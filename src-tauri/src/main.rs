@@ -3,7 +3,9 @@
 mod auth;
 mod commands;
 mod console;
+mod disk;
 mod import;
+mod install;
 mod library;
 mod logging;
 mod paths;
@@ -32,6 +34,12 @@ struct Args {
     bench_scroll: bool,
     /// Dev tooling for screenshots: `<route>[:<section>|:profile|:wallet]`.
     dev_route: Option<String>,
+    /// Development guard: refuse install/update/uninstall writes outside this folder.
+    dev_install_root: Option<PathBuf>,
+    /// Dev tooling: log exact sizes of all installable games after the first sync.
+    dev_probe_sizes: bool,
+    /// Dev tooling: `<install|verify|repair|uninstall>:<app>` after the first sync.
+    dev_action: Option<String>,
     mock_games: usize,
     data_dir: Option<PathBuf>,
     reset: bool,
@@ -42,6 +50,9 @@ fn parse_args() -> Args {
         bench: false,
         bench_scroll: false,
         dev_route: None,
+        dev_install_root: None,
+        dev_probe_sizes: false,
+        dev_action: None,
         // Mock data only on request (benchmarks); the real library comes from sync.
         mock_games: 0,
         data_dir: None,
@@ -60,6 +71,9 @@ fn parse_args() -> Args {
             }
             "--data-dir" => args.data_dir = it.next().map(PathBuf::from),
             "--dev-route" => args.dev_route = it.next(),
+            "--dev-install-root" => args.dev_install_root = it.next().map(PathBuf::from),
+            "--dev-probe-sizes" => args.dev_probe_sizes = true,
+            "--dev-action" => args.dev_action = it.next(),
             _ => {}
         }
     }
@@ -86,11 +100,25 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             library::sync_status,
             import::egl_import_scan,
             import::egl_adopt,
+            install::prepare_install,
+            install::start_install,
+            install::start_update,
+            install::pause_download,
+            install::resume_download,
+            install::cancel_download,
+            install::prepare_move,
+            install::move_game,
+            install::cancel_move,
+            install::verify_game,
+            install::repair_game,
+            install::uninstall_game,
         ])
         .events(tauri_specta::collect_events![
             auth::AuthChanged,
             library::LibraryChanged,
-            library::SyncStatusChanged
+            library::SyncStatusChanged,
+            install::DownloadProgress,
+            install::MoveProgress
         ])
 }
 
@@ -211,6 +239,12 @@ fn main() {
     let invoke = specta.invoke_handler();
     // Benchmarks and screenshot runs never touch the network.
     let no_network = args.bench || args.bench_scroll || args.dev_route.is_some();
+    let dev_install_root = args.dev_install_root.clone();
+    let dev_probe_sizes = args.dev_probe_sizes;
+    let dev_action = args.dev_action.clone();
+    if let Some(root) = &dev_install_root {
+        tracing::info!(root = %root.display(), "development install guard active");
+    }
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(w) = app.get_webview_window("main") {
@@ -241,10 +275,14 @@ fn main() {
                 paths: paths.clone(),
                 bench,
                 no_network,
+                dev_probe_sizes,
+                dev_action: dev_action.clone(),
                 shown: AtomicBool::new(false),
             });
             app.manage(auth::AuthState::new(api_client()?, boot.auth));
             app.manage(library::LibraryState::default());
+            app.manage(install::DownloadsState::new(dev_install_root.clone()));
+            install::apply_speed_limit(app.handle());
 
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Next Launcher")

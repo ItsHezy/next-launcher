@@ -157,6 +157,11 @@ Path relative to a CDN base URL (`.../CloudDir`):
   and `b64u` = URL-safe base64 **without padding**.
 - If `group_num` is absent (never in binary, possible in JSON): `crc32(guid as 16 LE bytes) % 100`.
 
+**[OBS] Phase 4:** a feature level 13 build downloaded end to end from
+`ChunksV3/{group}/{hash}_{GUID}.chunk` (816 chunks, all SHA-1 checks passed). Feature levels 17 and 21 are parsed
+live (34 owned games; Fortnite's level 21 manifest, 151,991 chunks and 891 files, parses in 38 ms)
+but not downloaded yet. Level 22+ paths are covered by unit tests only.
+
 ## Chunk container (`.chunk` file) — [REF]
 
 | Offset | Size | Field | Since header v |

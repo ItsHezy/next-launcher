@@ -65,6 +65,8 @@ pub struct LibraryState {
     again: AtomicBool,
     loop_started: AtomicBool,
     images_running: AtomicBool,
+    probed: AtomicBool,
+    dev_installed: AtomicBool,
     status: std::sync::Mutex<Option<SyncStatus>>,
 }
 
@@ -182,6 +184,20 @@ async fn run(app: AppHandle) {
     }
     lib.running.store(false, Ordering::SeqCst);
     kick_images(&app);
+    if let Some(state) = app.try_state::<AppState>() {
+        if state.dev_probe_sizes && !lib.probed.swap(true, Ordering::SeqCst) {
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move { crate::install::probe_sizes(app).await });
+        }
+        if let Some(spec) = state.dev_action.clone() {
+            if !lib.dev_installed.swap(true, Ordering::SeqCst) {
+                let app = app.clone();
+                tauri::async_runtime::spawn(
+                    async move { crate::install::dev_action(app, spec).await },
+                );
+            }
+        }
+    }
 }
 
 fn catalog_fields(item: &CatalogItem) -> CatalogFields {

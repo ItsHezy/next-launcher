@@ -2,6 +2,13 @@
 
 export type Popover = 'profile' | 'wallet' | null;
 
+export type Dialog =
+  | null
+  | 'import'
+  | { kind: 'install'; appName: string }
+  | { kind: 'uninstall'; appName: string }
+  | { kind: 'move'; appName: string };
+
 interface Toast {
   id: number;
   text: string;
@@ -10,7 +17,7 @@ interface Toast {
 class UiState {
   popover = $state<Popover>(null);
   /** Modal dialogs (lazy-loaded). */
-  dialog = $state<'import' | null>(null);
+  dialog = $state<Dialog>(null);
   toasts = $state<Toast[]>([]);
   private next = 1;
 

@@ -666,3 +666,36 @@ mod tests {
         assert_eq!(c.library_token("acc").unwrap().as_deref(), Some("st-1"));
     }
 }
+
+/// Shared by other modules' tests: a cache with one signed-in account and one game.
+#[cfg(test)]
+pub(crate) mod tests_support {
+    use super::*;
+
+    pub fn cache_with_game(app: &str, latest: &str) -> Cache {
+        let c = Cache::open_in_memory().unwrap();
+        c.upsert_signed_in_account(&crate::AccountUpsert {
+            account_id: "acc",
+            display_name: "Player",
+            email: None,
+            country: None,
+        })
+        .unwrap();
+        c.apply_library(
+            "acc",
+            &[GameUpsert {
+                app_name: app.into(),
+                namespace: "ns".into(),
+                catalog_item_id: "id".into(),
+                latest_version: Some(latest.into()),
+                record_type: Some("APPLICATION".into()),
+                acquired_at: None,
+                fallback_title: app.into(),
+                catalog: None,
+            }],
+            true,
+        )
+        .unwrap();
+        c
+    }
+}

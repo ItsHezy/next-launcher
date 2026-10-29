@@ -2,11 +2,11 @@
   import { num } from '../../lib/boot';
   import Cover from '../../lib/components/Cover.svelte';
   import Icon from '../../lib/components/Icon.svelte';
+  import * as actions from '../../lib/gameActions';
   import Switch from '../../lib/components/Switch.svelte';
   import { bytes } from '../../lib/format';
   import { isInstalled, library } from '../../lib/state/library.svelte';
   import { settings } from '../../lib/state/settings.svelte';
-  import { comingSoon } from '../../lib/state/ui.svelte';
 
   const installed = $derived(library.games.filter(isInstalled));
   let open = $state<string | null>(null);
@@ -38,9 +38,12 @@
       {#if expanded}
         <div class="body" id="mg-{g.appName}">
           <div class="actions">
-            <button class="btn btn-quiet" onclick={() => comingSoon('Moving games', 4)}><Icon name="folder" size={18} /> Move…</button>
-            <button class="btn btn-quiet" onclick={() => comingSoon('Verify and repair', 4)}><Icon name="shield" size={18} /> Verify & repair</button>
-            <button class="btn btn-danger" onclick={() => comingSoon('Uninstalling', 4)}>Uninstall…</button>
+            <button class="btn btn-quiet" onclick={() => actions.move(g.appName)}><Icon name="folder" size={18} /> Move…</button>
+            {#if g.state === 'updateAvailable'}
+              <button class="btn btn-primary" onclick={() => actions.update(g.appName, g.title)}><Icon name="update" size={18} /> Update</button>
+            {/if}
+            <button class="btn btn-quiet" onclick={() => actions.verifyAndRepair(g.appName, g.title)}><Icon name="shield" size={18} /> Verify & repair</button>
+            <button class="btn btn-danger" onclick={() => actions.uninstall(g.appName)}>Uninstall…</button>
           </div>
           <label class="field">
             <span>Launch arguments</span>

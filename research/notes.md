@@ -66,13 +66,23 @@ How each fact was obtained. Raw downloads and probe output live in `research/ref
 | L13 | 1 owned game is third-party managed (`ThirdPartyManagedApp`/`Provider`) | DB count |
 | L14 | EGL `.item` booleans are `bIsIncompleteInstall` etc. (lowercase `b`); PascalCase deserialisation misses them | unit test caught it |
 
+## Phase 4 live verification (2026-10-29, owner's account, test game only)
+
+| # | Finding | Evidence |
+|---|---|---|
+| L15 | Build info (`assets/v2/.../label/Live`) works with the launcher token for an owned free game, and the manifest's `sha1(body)` matches `hash` | install proceeded (a mismatch fails the job) |
+| L16 | Owned installable games: feature levels 17 (16), 21 (13), 13 (5); 0 signed-URL builds, 0 encrypted builds; 1 with selective-download components (Fortnite, 2) | size probe, manifests only |
+| L17 | Feature level 13 chunk path `ChunksV3/{group:02}/{hash:016X}_{GUID}.chunk` downloads and passes chunk + file SHA-1 | 153-file install, 816 chunks |
+| L18 | Verify catches a one-byte change in place (size unchanged) via file SHA-1; repair fetched only its 5 chunks | verify / repair / verify log |
+| L19 | Resume after a forced kill skips files already renamed into place (141/153) | restart log `skipped=141` |
+
 ## Open questions (carried into phases)
 
 | Question | Phase |
 |---|---|
 | exact action bits for account update, kill OTHERS, wallet, fulfillment (resources present, L5) | 7 |
 | catalog bulk max ids per request (25 works; larger untested) | 6 |
-| a small free test game the owner owns (Fortnite is unsuitable: huge + anti-cheat) | 4 |
+| a small free test game the owner owns: *while True: learn()* chosen by the owner (Phase 4) | done |
 | store "Featured" source, searchStore filter args, checkout URL format | 6 |
 | achievements GraphQL on store.epicgames.com with bearer | 7 |
 | presence connection cost vs idle budget | 7 |

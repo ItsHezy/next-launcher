@@ -4,6 +4,7 @@
 //! token storage; `egs-auth` owns the session and hands access tokens in.
 
 pub mod account;
+pub mod downloads;
 pub mod error;
 pub mod http;
 pub mod images;

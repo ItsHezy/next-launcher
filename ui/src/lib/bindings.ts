@@ -31,12 +31,27 @@ export const commands = {
 	eglImportScan: () => typedError<ImportCandidate[], UiError>(__TAURI_INVOKE("egl_import_scan")),
 	/**  Use an existing install. The user confirmed in the dialog that names the folder. */
 	eglAdopt: (appName: string) => typedError<null, UiError>(__TAURI_INVOKE("egl_adopt", { appName })),
+	prepareInstall: (appName: string) => typedError<InstallPreview_Serialize, UiError>(__TAURI_INVOKE("prepare_install", { appName })),
+	startInstall: (appName: string, folder: string, components: string[]) => typedError<number | null, UiError>(__TAURI_INVOKE("start_install", { appName, folder, components })),
+	/**  Queue an update for an installed game whose build is out of date. */
+	startUpdate: (appName: string) => typedError<null, UiError>(__TAURI_INVOKE("start_update", { appName })),
+	pauseDownload: (id: number | null) => typedError<null, UiError>(__TAURI_INVOKE("pause_download", { id })),
+	resumeDownload: (id: number | null) => typedError<null, UiError>(__TAURI_INVOKE("resume_download", { id })),
+	cancelDownload: (id: number | null) => typedError<null, UiError>(__TAURI_INVOKE("cancel_download", { id })),
+	prepareMove: (appName: string) => typedError<MovePreview, UiError>(__TAURI_INVOKE("prepare_move", { appName })),
+	moveGame: (appName: string, folder: string, options: MoveOptions) => typedError<MoveResult, UiError>(__TAURI_INVOKE("move_game", { appName, folder, options })),
+	cancelMove: (appName: string) => typedError<null, UiError>(__TAURI_INVOKE("cancel_move", { appName })),
+	verifyGame: (appName: string) => typedError<VerifyResult, UiError>(__TAURI_INVOKE("verify_game", { appName })),
+	repairGame: (appName: string) => typedError<null, UiError>(__TAURI_INVOKE("repair_game", { appName })),
+	uninstallGame: (appName: string, options: UninstallOptions) => typedError<null, UiError>(__TAURI_INVOKE("uninstall_game", { appName, options })),
 };
 
 /** Events */
 export const events = {
 	authChanged: makeEvent<AuthChanged_Serialize, AuthChanged_Deserialize>("auth-changed"),
+	downloadProgress: makeEvent<DownloadProgress, DownloadProgress>("download-progress"),
 	libraryChanged: makeEvent<LibraryChanged, LibraryChanged>("library-changed"),
+	moveProgress: makeEvent<MoveProgress, MoveProgress>("move-progress"),
 	syncStatusChanged: makeEvent<SyncStatusChanged_Serialize, SyncStatusChanged_Deserialize>("sync-status-changed"),
 };
 
@@ -96,6 +111,26 @@ export type AuthStatus_Serialize =
 { state: "offline"; displayName: string; retryInSecs: number } | 
 /**  Epic wants the user to finish something on its website first. */
 { state: "needsAction"; displayName: string; action: string };
+
+export type Component = {
+	id: string,
+	title: string,
+	description: string,
+	required: boolean,
+	size: number | null,
+};
+
+/**  Live progress of the running download (throttled to ~4/s). */
+export type DownloadProgress = {
+	id: number | null,
+	appName: string,
+	title: string,
+	/**  `preparing` | `downloading` | `verifying` | `finishing` */
+	phase: string,
+	bytesDone: number | null,
+	bytesTotal: number | null,
+	speedBps: number | null,
+};
 
 export type DownloadRow = {
 	id: number | null,
@@ -192,6 +227,34 @@ export type ImportCandidate = {
 	adoptable: boolean,
 };
 
+export type InstallPreview = InstallPreview_Serialize | InstallPreview_Deserialize;
+
+export type InstallPreview_Deserialize = {
+	appName: string,
+	title: string,
+	buildVersion: string,
+	/**  Size with only required components. */
+	installSize: number | null,
+	downloadSize: number | null,
+	components: Component[],
+	defaultFolder: string,
+	/**  Free space on the default folder's drive, if known. */
+	freeBytes?: number | null,
+};
+
+export type InstallPreview_Serialize = {
+	appName: string,
+	title: string,
+	buildVersion: string,
+	/**  Size with only required components. */
+	installSize: number | null,
+	downloadSize: number | null,
+	components: Component[],
+	defaultFolder: string,
+	/**  Free space on the default folder's drive, if known. */
+	freeBytes: number | null,
+};
+
 export type InstallState = "notInstalled" | "installed" | "updateAvailable" | "installing";
 
 /**  Something in the library changed; the UI re-reads the snapshot and merges it. */
@@ -232,6 +295,33 @@ export type Mark = {
 	ms: number | null,
 };
 
+export type MoveOptions = {
+	/**  The user confirmed moving a folder the official launcher also manages. */
+	confirmExternal: boolean,
+};
+
+export type MovePreview = {
+	currentPath: string,
+	/**  Everything in the folder, including files the game wrote there. */
+	bytes: number | null,
+	eglManaged: boolean,
+};
+
+/**  Live progress of a game being moved to another folder (throttled to ~4/s). */
+export type MoveProgress = {
+	appName: string,
+	bytesDone: number | null,
+	bytesTotal: number | null,
+};
+
+export type MoveResult = {
+	path: string,
+	/**  Same drive: renamed in place. */
+	renamed: boolean,
+	/**  Some old files couldn't be deleted after the copy (in use); they are safe to remove. */
+	leftBehind: boolean,
+};
+
 /**  A stored setting. Settings are flat `section.key` → scalar. */
 export type SettingValue = boolean | number | null | string;
 
@@ -263,6 +353,16 @@ export type SyncStatus_Serialize = {
 export type UiError = {
 	code: string,
 	message: string,
+};
+
+export type UninstallOptions = {
+	/**  The user confirmed removing files from a folder the official launcher also manages. */
+	confirmExternal: boolean,
+};
+
+export type VerifyResult = {
+	filesChecked: number | null,
+	problems: string[],
 };
 
 export type WindowAction = "minimize" | "toggleMaximize" | "close";
