@@ -324,7 +324,7 @@ pub async fn load_wallet(
     Ok(info)
 }
 
-/// After sign-in and when the web window closes: refresh the wallet, tell the UI.
+/// After sign-in and when Epic's page closes: refresh the wallet, tell the UI.
 pub async fn refresh_wallet(app: &AppHandle) {
     let (Some(auth), Some(account), Some(state)) = (
         app.try_state::<AuthState>(),

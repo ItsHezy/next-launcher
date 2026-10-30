@@ -106,9 +106,7 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::set_pinned,
             commands::window_action,
             auth::auth_status,
-            auth::sign_in,
             auth::sign_out,
-            auth::open_corrective_action,
             library::refresh_library,
             library::sync_status,
             import::egl_import_scan,
@@ -131,7 +129,6 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             store::store_browse,
             store::store_search,
             store::store_product,
-            store::store_open,
             account::account_details,
             account::update_account,
             account::wallet_summary,
@@ -374,10 +371,21 @@ fn main() {
                 .visible(false)
                 .background_color(BG)
                 .data_directory(paths.webview_ui.clone())
-                .initialization_script(format!("window.__NL_BOOT__={};", boot.json))
-                .build()?;
+                .initialization_script(format!("window.__NL_BOOT__={};", boot.json));
+            // Development (`NL_DEV_UI_DEBUG_PORT`): a debugger port on the app's own view only.
+            // Epic's pages run in their own browser process without one, so Epic's bot checks
+            // see them as they are for users.
+            #[cfg(debug_assertions)]
+            let main = match std::env::var("NL_DEV_UI_DEBUG_PORT") {
+                Ok(port) if port.parse::<u16>().is_ok() => main.additional_browser_args(&format!(
+                    "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection \
+                     --remote-debugging-port={port}"
+                )),
+                _ => main,
+            };
+            let main = main.build()?;
             startup::mark("window_built");
-            // Closing the main window quits, even while an Epic web window is open.
+            // Closing the main window quits.
             let quit = app.handle().clone();
             main.on_window_event(move |e| match e {
                 // "Minimize to tray on close": Alt+F4 and the taskbar's Close hide instead.

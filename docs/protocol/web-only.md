@@ -4,7 +4,8 @@ Phase 0 result (2026-10-28), to be shown to the owner before Phase 2.
 
 **How "signed-in web page" works:** our token → single-use exchange code → web session cookie
 in the web profile → Epic's page opens already signed in (auth.md §6). Since ADR 0016 these pages
-show inside Settings (a view in the main window), not in a second window.
+show inside Settings (a view in the main window), not in a second window; since ADR 0017 so do the
+store's checkout, wishlist and cart (Store) and Epic's sign-in page.
 **Verified in Phase 2 (2026-10-28):** with all web cookies deleted, the account Password page
 opened signed in from the stored session alone. No extra sign-in is ever needed.
 

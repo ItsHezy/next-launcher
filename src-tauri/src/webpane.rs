@@ -1,14 +1,15 @@
-//! Epic's own account, wallet, help and legal pages inside the main window (Settings), instead
-//! of a second window (ADR 0016). A child webview sits over the Settings content area; the UI
-//! reports where that area is and hides the view while a menu or dialog is open. It uses the
-//! same signed-in web profile as the old web window (exchange-code bridge, auth.md §6).
+//! Epic's own pages inside the main window, never a second window (ADR 0016, 0017): account,
+//! wallet, help and legal pages in Settings, store pages and the checkout in the Store, and
+//! Epic's sign-in page. A child webview sits over a box of the UI; the UI reports where that
+//! box is and hides the view while a menu or dialog is open. It uses the app's Epic web profile
+//! (signed in through the exchange-code bridge, auth.md §6).
 //!
 //! The pages wear the app's look (`webpane.css`) and behave like software, not a browser
 //! (`webpane.js`): no site header or footer, no context menu, reload, print or zoom. The view
 //! stays hidden while a page loads, so the UI's own loading state shows instead of web pages
 //! assembling themselves.
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::time::Duration;
 
 use serde::Deserialize;
@@ -17,6 +18,7 @@ use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, State, Url, Webvie
 
 use crate::auth::EpicPage;
 use crate::commands::{AppState, UiError};
+use crate::store::StoreTarget;
 
 const PANE: &str = "epic-pane";
 /// The app's `--surface`, so an empty view never flashes white.
@@ -26,7 +28,7 @@ const DEFAULT_ACCENT: &str = "#0a6fd6";
 /// (e.g. Epic's human check) and is shown.
 const HOP_GRACE: Duration = Duration::from_millis(1500);
 
-/// The Settings content area, in CSS pixels of the main window.
+/// The UI's box for the view, in CSS pixels of the main window.
 #[derive(Debug, Clone, Copy, Deserialize, specta::Type)]
 pub struct PaneBounds {
     pub x: f64,
@@ -35,10 +37,37 @@ pub struct PaneBounds {
     pub height: f64,
 }
 
+/// What the view shows.
+#[derive(Debug, Clone, Deserialize, specta::Type)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum PaneTarget {
+    /// One of Epic's account, wallet, help or legal pages (Settings).
+    Page { page: EpicPage },
+    /// A store page: the checkout, a product, the wishlist or cart (Store).
+    Store { target: StoreTarget },
+    /// Epic's sign-in page; what it returns signs the app in (Settings › Account).
+    SignIn,
+    /// The step Epic asked for before the account can be used (corrective action).
+    Corrective,
+}
+
+impl PaneTarget {
+    /// For logs: which page, never ids or search text.
+    fn name(&self) -> String {
+        match self {
+            Self::Page { page } => format!("{page:?}"),
+            Self::Store { target } => format!("store {}", target.kind()),
+            Self::SignIn => "sign-in".into(),
+            Self::Corrective => "corrective action".into(),
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct PaneState {
-    /// False once the UI left the page: a pane that finishes opening after that closes again.
-    wanted: AtomicBool,
+    /// The UI box that owns the view (0: none). A view that finishes opening after its box left
+    /// closes again, and a late close from a box that was already replaced does nothing.
+    owner: AtomicU32,
     /// One open at a time, so two quick clicks can't both create the pane.
     opening: tokio::sync::Mutex<()>,
     /// A menu or dialog of the app is over the view.
@@ -138,32 +167,68 @@ fn on_page_load(webview: Webview, event: PageLoadEvent, url: &Url) {
     }
 }
 
-/// Show `page` in the pane (signed in when it needs it), creating the pane on first use.
-/// `accent` is the app's accent colour (`#rrggbb`), used by the page's styling.
+/// Where the view goes, and the page to open again through the sign-in hop if Epic shows its
+/// login page instead.
+async fn address(
+    app: &AppHandle,
+    target: &PaneTarget,
+) -> Result<(String, Option<String>), UiError> {
+    Ok(match target {
+        PaneTarget::Page { page } => {
+            let url = page.url();
+            if !page.needs_sign_in() {
+                (url.to_owned(), None)
+            } else if try_direct(url) {
+                (url.to_owned(), Some(url.to_owned()))
+            } else {
+                (crate::auth::signed_in_url(app, url).await, None)
+            }
+        }
+        // Always through the hop: a purchase lands on the account the app is signed in to.
+        PaneTarget::Store { target } => {
+            let url = crate::store::page_url(app, target)?;
+            (crate::auth::signed_in_url(app, &url).await, None)
+        }
+        PaneTarget::SignIn => (crate::auth::begin_sign_in(app)?, None),
+        PaneTarget::Corrective => (crate::auth::corrective_url(app)?, None),
+    })
+}
+
+/// Show `target` in the view (signed in when it needs it), creating the view on first use.
+/// `id` names the UI box asking; `accent` is the app's accent colour (`#rrggbb`), used by the
+/// page's styling.
 #[tauri::command]
 #[specta::specta]
 pub async fn web_pane_open(
     app: AppHandle,
     state: State<'_, AppState>,
     pane: State<'_, PaneState>,
-    page: EpicPage,
+    id: u32,
+    target: PaneTarget,
     bounds: PaneBounds,
     accent: String,
 ) -> Result<(), UiError> {
-    pane.wanted.store(true, Ordering::SeqCst);
+    pane.owner.store(id, Ordering::SeqCst);
     let _one = pane.opening.lock().await;
-    tracing::info!(?page, "showing Epic page in the app");
-    let direct = !page.needs_sign_in() || try_direct(page.url());
-    let url = if direct {
-        page.url().to_owned()
-    } else {
-        crate::auth::signed_in_url(&app, page.url()).await
-    };
+    tracing::info!(page = %target.name(), "showing Epic page in the app");
+    let sign_in = matches!(target, PaneTarget::SignIn);
+    if !sign_in {
+        crate::auth::cancel_sign_in(&app);
+    }
+    let (url, retry) = address(&app, &target).await?;
     if let Ok(mut d) = pane.direct.lock() {
-        *d = (direct && page.needs_sign_in()).then(|| page.url().to_owned());
+        *d = retry;
     }
     let parsed: Url = url.parse().map_err(|_| err("address"))?;
-    if !pane.wanted.load(Ordering::SeqCst) {
+    // The box asking was left (or replaced) meanwhile.
+    let left = |pane: &PaneState| {
+        let gone = pane.owner.load(Ordering::SeqCst) != id;
+        if gone && sign_in {
+            crate::auth::cancel_sign_in(&app);
+        }
+        gone
+    };
+    if left(&pane) {
         return Ok(());
     }
     if let Some(w) = app.get_webview(PANE) {
@@ -178,6 +243,8 @@ pub async fn web_pane_open(
         .data_directory(state.paths.webview_web.clone())
         .background_color(SURFACE)
         .initialization_script(page_script(&accent))
+        // Acts only on Epic's sign-in answer page (auth.md §3).
+        .initialization_script(egs_auth::LOGIN_INIT_SCRIPT)
         .zoom_hotkeys_enabled(false)
         .general_autofill_enabled(false)
         .on_navigation(move |u| {
@@ -187,6 +254,11 @@ pub async fn web_pane_open(
                 path = u.path(),
                 "Epic page navigation"
             );
+            // Epic's sign-in answer: handed to `auth`, never loaded.
+            if let Some(cb) = egs_auth::parse_callback(u.as_str()) {
+                crate::auth::finish_sign_in(&nav, cb);
+                return false;
+            }
             if u.scheme() != "https" {
                 return false;
             }
@@ -221,7 +293,7 @@ pub async fn web_pane_open(
         let _ = webview.hide();
     }
     // The UI left while it was being created.
-    if !pane.wanted.load(Ordering::SeqCst) {
+    if left(&pane) {
         let _ = close_pane(&app);
     }
     Ok(())
@@ -247,7 +319,7 @@ fn sign_in_instead(app: &AppHandle) -> bool {
     true
 }
 
-/// Follow the Settings content area (window resized, layout changed).
+/// Follow the UI's box (window resized, layout changed).
 #[tauri::command]
 #[specta::specta]
 pub fn web_pane_bounds(app: AppHandle, bounds: PaneBounds) {
@@ -270,13 +342,21 @@ pub fn web_pane_visible(app: AppHandle, pane: State<'_, PaneState>, visible: boo
     }
 }
 
-/// The user left the page.
+/// The user left the page (box `id`). Leaving Epic's sign-in page cancels signing in.
 #[tauri::command]
 #[specta::specta]
-pub fn web_pane_close(app: AppHandle, pane: State<'_, PaneState>) {
-    pane.wanted.store(false, Ordering::SeqCst);
+pub fn web_pane_close(app: AppHandle, pane: State<'_, PaneState>, id: u32) {
+    if pane
+        .owner
+        .compare_exchange(id, 0, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return; // another box has the view now
+    }
+    crate::auth::cancel_sign_in(&app);
     if close_pane(&app) {
-        // Changes made on Epic's pages (wallet, redeemed codes) show up after a refresh.
+        // Changes made on Epic's pages (a game got, wallet, redeemed codes) show up after a
+        // refresh.
         crate::library::sync_soon(&app);
         tauri::async_runtime::spawn(async move { crate::account::refresh_wallet(&app).await });
     }
@@ -319,6 +399,31 @@ mod tests {
         assert!(!script.contains("__CSS__") && !script.contains("__ACCENT__"));
         assert!(script.contains(r#"const CSS = "/* Epic's pages"#));
         assert!(script.contains("--nl-accent: #ff0000;"));
+    }
+
+    #[test]
+    fn page_script_leaves_frames_alone() {
+        // WebView2 runs start-up scripts in every frame (payment, human checks).
+        assert!(page_script("#000000").contains("window.top !== window"));
+    }
+
+    #[test]
+    fn targets_come_from_the_ui_and_log_without_ids() {
+        let t: PaneTarget = serde_json::from_str(
+            r#"{"kind":"store","target":{"kind":"checkout","namespace":"ns1","offerId":"o2"}}"#,
+        )
+        .expect("checkout");
+        assert_eq!(t.name(), "store checkout");
+        let t: PaneTarget = serde_json::from_str(
+            r#"{"kind":"store","target":{"kind":"search","query":"my words"}}"#,
+        )
+        .expect("search");
+        assert_eq!(t.name(), "store search");
+        let t: PaneTarget = serde_json::from_str(r#"{"kind":"signIn"}"#).expect("sign-in");
+        assert_eq!(t.name(), "sign-in");
+        let t: PaneTarget =
+            serde_json::from_str(r#"{"kind":"page","page":"redeem"}"#).expect("page");
+        assert_eq!(t.name(), "Redeem");
     }
 
     #[test]

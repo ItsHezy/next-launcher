@@ -16,10 +16,10 @@
   </div>
 {:else if s.state === 'signingIn'}
   <div class="banner" role="status">
-    <Icon name="external" size={20} />
+    <Icon name="user" size={20} />
     <div class="txt">
-      <strong>Finish signing in in the Epic Games window</strong>
-      <span>Two-factor codes and security checks happen there, on Epic's page.</span>
+      <strong>Signing in…</strong>
+      <span>Two-factor codes and security checks happen on Epic's page, in Settings › Account.</span>
     </div>
   </div>
 {:else if s.state === 'offline'}

@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { commands, type StoreProduct_Serialize as Product, type StoreTarget } from '../../lib/bindings';
+  import { untrack } from 'svelte';
+  import { commands, type StoreProduct_Serialize as Product } from '../../lib/bindings';
   import { num } from '../../lib/boot';
   import Icon from '../../lib/components/Icon.svelte';
   import Markdown from '../../lib/components/Markdown.svelte';
+  import { library } from '../../lib/state/library.svelte';
   import { router } from '../../lib/state/router.svelte';
   import { freeLabel, store, type Offer } from '../../lib/state/store.svelte';
-  import { ui } from '../../lib/state/ui.svelte';
 
   let { offer }: { offer: Offer } = $props();
 
   let product = $state.raw<Product | null>(null);
   let error = $state<string | null>(null);
-  let opening = $state(false);
   let failed = $state(false);
 
   // Details refine what the grid already showed (price, ownership).
@@ -39,12 +39,18 @@
     });
   });
 
-  async function open(target: StoreTarget, what: string) {
-    opening = true;
-    const res = await commands.storeOpen(target);
-    opening = false;
-    ui.toast(res.status === 'ok' ? what : res.error.message);
-  }
+  // A game got on Epic's checkout shows as owned once the library has it (it refreshes when
+  // Epic's page closes).
+  $effect(() => {
+    void library.games;
+    const o = offer;
+    untrack(() => {
+      if (!product || product.offer.owned) return;
+      void commands.storeProduct(o.namespace, o.id).then((res) => {
+        if (store.product === o && res.status === 'ok') product = res.data;
+      });
+    });
+  });
 </script>
 
 <div class="product">
@@ -96,24 +102,15 @@
         {#if giveaway}<p class="note">{giveaway}</p>{/if}
         <button
           class="btn btn-primary wide"
-          disabled={opening}
-          onclick={() =>
-            open(
-              { kind: 'checkout', namespace: view.namespace, offerId: view.id },
-              "Opened Epic's checkout. You review and confirm the order there.",
-            )}
+          onclick={() => store.openEpic({ kind: 'checkout', namespace: view.namespace, offerId: view.id }, 'Checkout')}
         >
           {free ? 'Get' : 'Buy now'}
         </button>
-        <p class="note">Opens Epic's own checkout, signed in. Nothing is bought until you confirm there.</p>
+        <p class="note">Shows Epic's own checkout, signed in. Nothing is bought until you confirm there.</p>
       {/if}
       {#if view.slug}
-        <button
-          class="btn btn-quiet wide"
-          disabled={opening}
-          onclick={() => open({ kind: 'product', slug: view.slug ?? '' }, "Opened on Epic's store.")}
-        >
-          <Icon name="external" size={16} /> View on Epic's store
+        <button class="btn btn-quiet wide" onclick={() => store.openEpic({ kind: 'product', slug: view.slug ?? '' }, "Epic's store page")}>
+          View on Epic's store
         </button>
       {/if}
       {#if released}<p class="note">Released {released}</p>{/if}

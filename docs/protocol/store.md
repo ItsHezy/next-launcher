@@ -102,15 +102,18 @@ stays a web page.
 ## Wishlist, cart, checkout — [OBS] → embedded web
 
 - Wishlist and cart are store-site features tied to the web session. No usable API is documented
-  in our references. The top-bar Wishlist/Cart buttons open `https://store.epicgames.com/<lang>/wishlist`
-  and `/<lang>/cart` in the signed-in web window (exchange-code bridge, auth.md §6).
-- **Checkout is always Epic's own page** in the signed-in web window. We build a product or cart URL,
+  in our references. The top-bar Wishlist/Cart buttons show `https://store.epicgames.com/<lang>/wishlist`
+  and `/<lang>/cart` inside the Store view, signed in (exchange-code bridge, auth.md §6; ADR 0017).
+- **Checkout is always Epic's own page**, shown inside the Store view, signed in. We build a product URL,
   and the user completes payment, 2FA and confirmation themselves. No purchase step is automated.
   `https://store.epicgames.com/purchase?offers=1-<namespace>-<offerId>` opens Epic's checkout
   for that offer, signed in **[OBS]** (Phase 6: a free giveaway showed "Add to library"; nothing
   was clicked). Product pages: `https://store.epicgames.com/<lang>/p/<slug>` **[OBS]**.
   Slugs and ids are checked (`[A-Za-z0-9_-]`) before they go into a URL.
-- After the web window closes, trigger a library refresh (new purchases show up within seconds).
+- After Epic's page closes, trigger a library refresh (new purchases show up within seconds); an
+  open product page re-checks ownership when the library changes.
+- The checkout's payment step is a frame from Epic's payment site; the app's styling never runs
+  in frames (ADR 0017).
 
 ## Caching
 

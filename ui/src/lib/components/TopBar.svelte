@@ -1,6 +1,5 @@
 <script lang="ts">
   import { dismiss } from '../actions';
-  import { commands, type StoreTarget } from '../bindings';
   import { account } from '../state/account.svelte';
   import { auth } from '../state/auth.svelte';
   import { library } from '../state/library.svelte';
@@ -46,10 +45,6 @@
     library.query = '';
     searching = false;
   }
-  async function openEpic(target: StoreTarget) {
-    const res = await commands.storeOpen(target);
-    if (res.status === 'error') ui.toast(res.error.message);
-  }
 </script>
 
 <header class="topbar panel" data-tauri-drag-region>
@@ -85,10 +80,12 @@
     {:else}
       <button class="icon-btn" aria-label="Search" onclick={openSearch}><Icon name="search" /></button>
     {/if}
-    <button class="icon-btn" aria-label="Wishlist (opens Epic's page)" onclick={() => openEpic({ kind: 'wishlist' })}>
+    <button class="icon-btn" aria-label="Wishlist (Epic's page)" onclick={() => store.openEpic({ kind: 'wishlist' }, 'Wishlist')}>
       <Icon name="heart" />
     </button>
-    <button class="icon-btn" aria-label="Cart (opens Epic's page)" onclick={() => openEpic({ kind: 'cart' })}><Icon name="cart" /></button>
+    <button class="icon-btn" aria-label="Cart (Epic's page)" onclick={() => store.openEpic({ kind: 'cart' }, 'Cart')}>
+      <Icon name="cart" />
+    </button>
 
     {#if auth.hasAccount}
     <div class="anchor">

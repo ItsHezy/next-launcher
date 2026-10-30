@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { commands } from '../../lib/bindings';
   import Icon from '../../lib/components/Icon.svelte';
+  import WebPane from '../../lib/components/WebPane.svelte';
+  import { router } from '../../lib/state/router.svelte';
   import { store, type Chip, type Offer } from '../../lib/state/store.svelte';
-  import { ui } from '../../lib/state/ui.svelte';
   import ProductView from './ProductView.svelte';
   import StoreCard from './StoreCard.svelte';
 
@@ -14,6 +14,8 @@
   ];
 
   let scroller = $state<HTMLDivElement>();
+  /** Epic's store page shown here (checkout, wishlist, cart...), if any. */
+  const web = $derived(router.route === 'store' ? router.web : null);
 
   const sections = $derived.by(() => {
     const f = store.featured;
@@ -42,13 +44,18 @@
     scroller?.scrollTo({ top: 0 });
   });
 
-  async function openEpic() {
-    const res = await commands.storeOpen(
-      store.searching ? { kind: 'search', query: store.query.trim() } : { kind: 'home' },
-    );
-    if (res.status === 'error') ui.toast(res.error.message);
+  function openEpic() {
+    if (store.searching) store.openEpic({ kind: 'search', query: store.query.trim() }, "Search on Epic's store");
+    else store.openEpic({ kind: 'home' }, "Epic's store");
+  }
+
+  function onkey(e: KeyboardEvent) {
+    if (e.key !== 'Escape' || !web || e.target instanceof HTMLInputElement) return;
+    router.web = null;
   }
 </script>
+
+<svelte:window onkeydown={onkey} />
 
 {#snippet grid(offers: Offer[], label: string)}
   <ul class="grid" aria-label={label}>
@@ -58,7 +65,21 @@
   </ul>
 {/snippet}
 
-<div class="page" bind:this={scroller}>
+{#if web}
+  <div class="web panel">
+    <div class="bar">
+      <button class="up" onclick={() => (router.web = null)}>
+        <Icon name="chevronLeft" size={20} />
+        <span>{store.product?.title ?? 'Store'}</span>
+      </button>
+      <h2>{web.title}</h2>
+    </div>
+    <WebPane target={web.target} />
+  </div>
+{/if}
+
+<!-- Kept while Epic's page shows, so going back returns to the same place. -->
+<div class="page" hidden={!!web} bind:this={scroller}>
   {#if store.product}
     <ProductView offer={store.product} />
   {:else}
@@ -80,7 +101,7 @@
       <div class="notice" role="alert">
         <p>{store.error.message}</p>
         {#if store.error.challenge}
-          <button class="btn btn-primary" onclick={openEpic}><Icon name="external" size={16} /> Open Epic's store</button>
+          <button class="btn btn-primary" onclick={openEpic}>Open Epic's store</button>
         {:else}
           <button class="btn btn-quiet" onclick={() => store.load()}>Try again</button>
         {/if}
@@ -115,11 +136,50 @@
       {/if}
     {/if}
 
-    <p class="foot"><Icon name="info" size={16} /> Checkout always opens Epic's own page, signed in, where you confirm the purchase.</p>
+    <p class="foot"><Icon name="info" size={16} /> Checkout is Epic's own page, signed in, where you confirm the purchase.</p>
   {/if}
 </div>
 
 <style>
+  .web {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 64px;
+    padding: 8px 20px 8px 14px;
+  }
+  .up {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    min-height: var(--hit);
+    max-width: 40%;
+    padding: 0 12px 0 6px;
+    border-radius: var(--radius-sm);
+    color: var(--accent-text);
+    font-weight: 500;
+    flex: none;
+  }
+  .up span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .up:hover {
+    background: var(--hover);
+  }
+  .bar h2 {
+    font-size: 22px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .page {
     height: 100%;
     overflow-y: auto;

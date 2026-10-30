@@ -1,7 +1,7 @@
 // Tiny in-memory router. Routes stay mounted once visited (tab switches only
 // toggle visibility), and lazy routes are prefetched when the app is idle.
 
-import type { EpicPage } from '../bindings';
+import type { PaneTarget } from '../bindings';
 
 export type Route = 'library' | 'store' | 'unreal' | 'fab' | 'settings';
 export type SettingsSection =
@@ -29,8 +29,9 @@ class RouterState {
   section = $state<SettingsSection>('general');
   /** The route to return to from Settings. */
   back = $state<Route>('library');
-  /** Epic's own page shown inside the Settings section (ADR 0016); any navigation leaves it. */
-  epicPage = $state<{ page: EpicPage; title: string } | null>(null);
+  /** Epic's own page shown inside the open route, Settings or Store (ADR 0016, 0017); any
+   *  navigation leaves it. */
+  web = $state.raw<{ target: PaneTarget; title: string } | null>(null);
   visited = $state<Record<Route, boolean>>({
     library: true,
     store: false,
@@ -41,7 +42,7 @@ class RouterState {
   timings = $state.raw<NavTiming[]>([]);
 
   go(route: Route, section?: SettingsSection) {
-    this.epicPage = null;
+    this.web = null;
     if (section) this.section = section;
     if (route === this.route) return;
     const firstVisit = !this.visited[route];
@@ -57,6 +58,12 @@ class RouterState {
         if (import.meta.env.DEV) console.debug(`[nav] ${route} ${firstVisit ? '(first)' : ''} ${ms.toFixed(1)} ms`);
       }),
     );
+  }
+
+  /** Show Epic's page inside `route` (in `section` of Settings): never a second window. */
+  show(route: 'settings' | 'store', target: PaneTarget, title: string, section?: SettingsSection) {
+    this.go(route, section);
+    this.web = { target, title };
   }
 }
 

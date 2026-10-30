@@ -1,13 +1,19 @@
+<script module lang="ts">
+  // Names each box, so Rust can tell a late close from a box that was already replaced.
+  const ids = { next: 1 };
+</script>
+
 <script lang="ts">
-  // Epic's own page, drawn by a native child view over this box (ADR 0016). Rust can't see
-  // our layout, so the box reports where it is; the view steps aside while a menu or dialog
+  // Epic's own page, drawn by a native child view over this box (ADR 0016, 0017). Rust can't
+  // see our layout, so the box reports where it is; the view steps aside while a menu or dialog
   // is open, because it always draws above the app's own content.
-  import { commands, type EpicPage, type PaneBounds } from '../../lib/bindings';
-  import { settings } from '../../lib/state/settings.svelte';
-  import { ui } from '../../lib/state/ui.svelte';
+  import { commands, type PaneBounds, type PaneTarget } from '../bindings';
+  import { settings } from '../state/settings.svelte';
+  import { ui } from '../state/ui.svelte';
 
-  let { page }: { page: EpicPage } = $props();
+  let { target }: { target: PaneTarget } = $props();
 
+  const id = ids.next++;
   let box = $state<HTMLElement>();
   let failed = $state<string | null>(null);
   const covered = $derived(ui.popover !== null || ui.dialog !== null);
@@ -21,11 +27,11 @@
   // A new page: navigate the view (creating it the first time). Rust keeps the view hidden
   // until the page has loaded, so the spinner below shows meanwhile.
   $effect(() => {
-    const p = page;
+    const t = target;
     const b = bounds();
     if (!b) return;
     failed = null;
-    void commands.webPaneOpen(p, b, settings.get('general.accent')).then((res) => {
+    void commands.webPaneOpen(id, t, b, settings.get('general.accent')).then((res) => {
       if (res.status === 'error') failed = res.error.message;
       else if (covered) void commands.webPaneVisible(false);
     });
@@ -57,7 +63,7 @@
   });
 
   // Leaving the page closes the view.
-  $effect(() => () => void commands.webPaneClose());
+  $effect(() => () => void commands.webPaneClose(id));
 </script>
 
 <div class="pane" bind:this={box}>

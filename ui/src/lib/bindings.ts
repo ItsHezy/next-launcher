@@ -18,11 +18,7 @@ export const commands = {
 	setPinned: (appName: string, pinned: boolean) => typedError<null, UiError>(__TAURI_INVOKE("set_pinned", { appName, pinned })),
 	windowAction: (action: WindowAction) => __TAURI_INVOKE<void>("window_action", { action }),
 	authStatus: () => __TAURI_INVOKE<AuthStatus_Serialize>("auth_status"),
-	/**  Open Epic's login page. Completion is reported through [`AuthChanged`]. */
-	signIn: () => typedError<null, UiError>(__TAURI_INVOKE("sign_in")),
 	signOut: () => typedError<null, UiError>(__TAURI_INVOKE("sign_out")),
-	/**  Open the page Epic asked for in a corrective action (e.g. accept a new policy). */
-	openCorrectiveAction: () => typedError<null, UiError>(__TAURI_INVOKE("open_corrective_action")),
 	refreshLibrary: () => typedError<null, UiError>(__TAURI_INVOKE("refresh_library")),
 	syncStatus: () => __TAURI_INVOKE<SyncStatus_Serialize>("sync_status"),
 	/**  List installs the official launcher knows about. Read-only. */
@@ -48,11 +44,6 @@ export const commands = {
 	storeBrowse: (chip: StoreChip, start: number | null) => typedError<StorePage_Serialize, UiError>(__TAURI_INVOKE("store_browse", { chip, start })),
 	storeSearch: (query: string, start: number | null) => typedError<StorePage_Serialize, UiError>(__TAURI_INVOKE("store_search", { query, start })),
 	storeProduct: (namespace: string, id: string) => typedError<StoreProduct_Serialize, UiError>(__TAURI_INVOKE("store_product", { namespace, id })),
-	/**
-	 *  Open an Epic store page in the signed-in web window (wishlist, cart, checkout...).
-	 *  Purchases always finish there, by the user; we never press anything on that page.
-	 */
-	storeOpen: (target: StoreTarget) => typedError<null, UiError>(__TAURI_INVOKE("store_open", { target })),
 	accountDetails: (force: boolean) => typedError<AccountDetails_Serialize, UiError>(__TAURI_INVOKE("account_details", { force })),
 	/**
 	 *  Change the display name or communication language (the UI asks first). Only fields
@@ -83,16 +74,17 @@ export const commands = {
 	/**  Download the update, check its signature, run the installer (which restarts the app). */
 	installAppUpdate: () => typedError<null, UiError>(__TAURI_INVOKE("install_app_update")),
 	/**
-	 *  Show `page` in the pane (signed in when it needs it), creating the pane on first use.
-	 *  `accent` is the app's accent colour (`#rrggbb`), used by the page's styling.
+	 *  Show `target` in the view (signed in when it needs it), creating the view on first use.
+	 *  `id` names the UI box asking; `accent` is the app's accent colour (`#rrggbb`), used by the
+	 *  page's styling.
 	 */
-	webPaneOpen: (page: EpicPage, bounds: PaneBounds, accent: string) => typedError<null, UiError>(__TAURI_INVOKE("web_pane_open", { page, bounds, accent })),
-	/**  Follow the Settings content area (window resized, layout changed). */
+	webPaneOpen: (id: number, target: PaneTarget, bounds: PaneBounds, accent: string) => typedError<null, UiError>(__TAURI_INVOKE("web_pane_open", { id, target, bounds, accent })),
+	/**  Follow the UI's box (window resized, layout changed). */
 	webPaneBounds: (bounds: PaneBounds) => __TAURI_INVOKE<void>("web_pane_bounds", { bounds }),
 	/**  Step aside while a menu or dialog is open (the native view draws above the UI). */
 	webPaneVisible: (visible: boolean) => __TAURI_INVOKE<void>("web_pane_visible", { visible }),
-	/**  The user left the page. */
-	webPaneClose: () => __TAURI_INVOKE<void>("web_pane_close"),
+	/**  The user left the page (box `id`). Leaving Epic's sign-in page cancels signing in. */
+	webPaneClose: (id: number) => __TAURI_INVOKE<void>("web_pane_close", { id }),
 	cloudSaveStatus: (appName: string) => typedError<SaveStatus_Serialize, UiError>(__TAURI_INVOKE("cloud_save_status", { appName })),
 	/**  Installed games whose catalog entry supports cloud saves (no network). */
 	cloudSaveGames: () => typedError<SaveStatus_Serialize[], UiError>(__TAURI_INVOKE("cloud_save_games")),
@@ -231,7 +223,7 @@ export type AuthStatus_Deserialize =
 { state: "signedOut"; reason?: string | null } | 
 /**  Restoring the saved session in the background (cached library stays visible). */
 { state: "restoring"; displayName: string } | 
-/**  The Epic login window is open. */
+/**  Epic's sign-in page is open (Settings › Account). */
 { state: "signingIn" } | { state: "signedIn"; accountId: string; displayName: string; email?: string | null; country?: string | null } | 
 /**  Saved session kept, but Epic can't be reached right now. */
 { state: "offline"; displayName: string; retryInSecs: number } | 
@@ -244,7 +236,7 @@ export type AuthStatus_Serialize =
 { state: "signedOut"; reason: string | null } | 
 /**  Restoring the saved session in the background (cached library stays visible). */
 { state: "restoring"; displayName: string } | 
-/**  The Epic login window is open. */
+/**  Epic's sign-in page is open (Settings › Account). */
 { state: "signingIn" } | { state: "signedIn"; accountId: string; displayName: string; email: string | null; country: string | null } | 
 /**  Saved session kept, but Epic can't be reached right now. */
 { state: "offline"; displayName: string; retryInSecs: number } | 
@@ -536,13 +528,24 @@ export type MoveResult = {
 	leftBehind: boolean,
 };
 
-/**  The Settings content area, in CSS pixels of the main window. */
+/**  The UI's box for the view, in CSS pixels of the main window. */
 export type PaneBounds = {
 	x: number | null,
 	y: number | null,
 	width: number | null,
 	height: number | null,
 };
+
+/**  What the view shows. */
+export type PaneTarget = 
+/**  One of Epic's account, wallet, help or legal pages (Settings). */
+{ kind: "page"; page: EpicPage } | 
+/**  A store page: the checkout, a product, the wishlist or cart (Store). */
+{ kind: "store"; target: StoreTarget } | 
+/**  Epic's sign-in page; what it returns signs the app in (Settings › Account). */
+{ kind: "signIn" } | 
+/**  The step Epic asked for before the account can be used (corrective action). */
+{ kind: "corrective" };
 
 export type RedeemResult = {
 	/**  What the code added, e.g. game names. */
@@ -696,7 +699,7 @@ export type StoreProduct_Serialize = {
 	features: string[],
 };
 
-/**  Epic store pages opened in the signed-in web window. */
+/**  Epic store pages shown inside the app, signed in (`webpane`). */
 export type StoreTarget = { kind: "home" } | { kind: "wishlist" } | { kind: "cart" } | { kind: "product"; slug: string } | 
 /**  Epic's checkout for one offer: the user reviews and pays there. */
 { kind: "checkout"; namespace: string; offerId: string } | { kind: "search"; query: string };

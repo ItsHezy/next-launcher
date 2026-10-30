@@ -1,24 +1,20 @@
 //! Sign-in, session restore, silent refresh, sign-out and signed-in Epic web pages.
-//! Protocol: docs/protocol/auth.md. Session logic lives in `egs-auth`; this module
-//! owns windows, app state and UI events.
+//! Protocol: docs/protocol/auth.md. Session logic lives in `egs-auth`; this module owns app
+//! state and UI events. Epic's pages, its sign-in page included, show inside the main window
+//! (`webpane`).
 
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use egs_api::{Client, Secret};
-use egs_auth::{
-    parse_callback, AccountSummary, AuthError, Callback, Pkce, Session, LOGIN_INIT_SCRIPT,
-};
+use egs_auth::{AccountSummary, AuthError, Callback, Pkce, Session};
 use egs_cache::AccountUpsert;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Manager, State};
 use tauri_specta::Event;
 
 use crate::commands::{AppState, UiError};
-
-const LOGIN_WINDOW: &str = "login";
-const WEB_WINDOW: &str = "epic-web";
 
 /// What the UI shows about the account.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
@@ -32,7 +28,7 @@ pub enum AuthStatus {
     SignedOut { reason: Option<String> },
     /// Restoring the saved session in the background (cached library stays visible).
     Restoring { display_name: String },
-    /// The Epic login window is open.
+    /// Epic's sign-in page is open (Settings › Account).
     SigningIn,
     SignedIn {
         account_id: String,
@@ -410,19 +406,12 @@ pub fn auth_status(auth: State<'_, AuthState>) -> AuthStatus {
         .unwrap_or(AuthStatus::SignedOut { reason: None })
 }
 
-/// Open Epic's login page. Completion is reported through [`AuthChanged`].
-#[tauri::command]
-#[specta::specta]
-pub async fn sign_in(
-    app: AppHandle,
-    auth: State<'_, AuthState>,
-    state: State<'_, AppState>,
-) -> Result<(), UiError> {
-    if let Some(w) = app.get_webview_window(LOGIN_WINDOW) {
-        let _ = w.unminimize();
-        let _ = w.set_focus();
-        return Ok(());
-    }
+/// Start signing in: the address of Epic's sign-in page, shown in the app (`webpane`), which
+/// hands its answer to [`finish_sign_in`]. Completion is reported through [`AuthChanged`].
+pub(crate) fn begin_sign_in(app: &AppHandle) -> Result<String, UiError> {
+    let auth = app
+        .try_state::<AuthState>()
+        .ok_or_else(|| UiError::internal("auth"))?;
     let pkce = if auth.use_pkce {
         Some(Pkce::generate().map_err(|e| UiError {
             code: "auth".into(),
@@ -436,70 +425,41 @@ pub async fn sign_in(
         *v = pkce.map(|p| p.verifier);
     }
     auth.login_active.store(true, Ordering::SeqCst);
+    set_status(app, AuthStatus::SigningIn);
+    Ok(url)
+}
 
-    let nav_app = app.clone();
-    let parsed = url.parse().map_err(|_| UiError {
-        code: "auth".into(),
-        message: "Couldn't build the sign-in address.".into(),
-    })?;
-    let window = WebviewWindowBuilder::new(&app, LOGIN_WINDOW, WebviewUrl::External(parsed))
-        .title("Sign in to Epic Games")
-        .inner_size(560.0, 780.0)
-        .min_inner_size(420.0, 560.0)
-        .center()
-        .data_directory(state.paths.webview_web.clone())
-        .initialization_script(LOGIN_INIT_SCRIPT)
-        .on_navigation(move |u| {
-            if let Some(cb) = parse_callback(u.as_str()) {
-                let app = nav_app.clone();
-                tauri::async_runtime::spawn(async move { complete_login(app, cb).await });
-                return false;
-            }
-            // Epic and the identity providers it offers are all https.
-            u.scheme() == "https"
-        })
-        .build()
-        .map_err(|e| {
-            auth.login_active.store(false, Ordering::SeqCst);
-            tracing::error!(error = %e, "could not open the login window");
-            UiError {
-                code: "auth".into(),
-                message: "Couldn't open the sign-in window.".into(),
-            }
-        })?;
+/// Epic's sign-in page answered. Only acted on while signing in.
+pub(crate) fn finish_sign_in(app: &AppHandle, cb: Callback) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move { complete_login(app, cb).await });
+}
 
-    let close_app = app.clone();
-    window.on_window_event(move |e| {
-        if matches!(e, WindowEvent::Destroyed) {
-            let Some(auth) = close_app.try_state::<AuthState>() else {
-                return;
-            };
-            if auth.login_active.swap(false, Ordering::SeqCst) {
-                // Closed by the user before finishing.
-                let previous = auth.status.lock().map(|s| s.clone()).ok();
-                if matches!(previous, Some(AuthStatus::SigningIn)) {
-                    set_status(&close_app, AuthStatus::SignedOut { reason: None });
-                }
-            }
+/// The sign-in page was left before it finished.
+pub(crate) fn cancel_sign_in(app: &AppHandle) {
+    let Some(auth) = app.try_state::<AuthState>() else {
+        return;
+    };
+    if auth.login_active.swap(false, Ordering::SeqCst) {
+        let previous = auth.status.lock().map(|s| s.clone()).ok();
+        if matches!(previous, Some(AuthStatus::SigningIn)) {
+            set_status(app, AuthStatus::SignedOut { reason: None });
         }
-    });
-    set_status(&app, AuthStatus::SigningIn);
-    Ok(())
+    }
 }
 
 async fn complete_login(app: AppHandle, cb: Callback) {
+    // Epic's answer page is next in the view: never shown (it holds the code).
+    let _ = crate::webpane::close_pane(&app);
     let Some(auth) = app.try_state::<AuthState>() else {
         return;
     };
     if !auth.login_active.swap(false, Ordering::SeqCst) {
-        return; // already handled
+        return; // already handled, or not signing in
     }
     let verifier = auth.verifier.lock().ok().and_then(|mut v| v.take());
     let used_pkce = verifier.is_some();
     let result = auth.session.sign_in(cb, verifier).await;
-    if let Some(w) = app.get_webview_window(LOGIN_WINDOW) {
-        let _ = w.close();
-    }
     match result {
         Ok(acct) => on_signed_in(&app, acct).await,
         Err(AuthError::CorrectiveAction { action, url }) => {
@@ -542,11 +502,6 @@ pub async fn sign_out(
     }
     if let Some(a) = app.try_state::<crate::account::AccountState>() {
         a.clear();
-    }
-    for label in [LOGIN_WINDOW, WEB_WINDOW] {
-        if let Some(w) = app.get_webview_window(label) {
-            let _ = w.close();
-        }
     }
     let _ = crate::webpane::close_pane(&app);
     // Forget Epic's web cookies too (the next sign-in starts clean).
@@ -637,54 +592,6 @@ pub(crate) fn encode(s: &str) -> String {
         .collect()
 }
 
-fn open_web_window(app: &AppHandle, url: &str, profile: std::path::PathBuf) -> Result<(), UiError> {
-    let err = |what: &str| UiError {
-        code: "web".into(),
-        message: format!("Couldn't open Epic's page ({what})."),
-    };
-    let parsed: tauri::Url = url.parse().map_err(|_| err("address"))?;
-    if let Some(w) = app.get_webview_window(WEB_WINDOW) {
-        w.navigate(parsed).map_err(|_| err("navigate"))?;
-        let _ = w.unminimize();
-        let _ = w.set_focus();
-        return Ok(());
-    }
-    WebviewWindowBuilder::new(app, WEB_WINDOW, WebviewUrl::External(parsed))
-        .title("Epic Games")
-        .inner_size(1100.0, 820.0)
-        .min_inner_size(640.0, 480.0)
-        .center()
-        .data_directory(profile)
-        .on_navigation(|u| {
-            // Host and path only: queries can carry exchange codes.
-            tracing::debug!(
-                host = u.host_str().unwrap_or(""),
-                path = u.path(),
-                "web window navigation"
-            );
-            u.scheme() == "https"
-        })
-        .build()
-        .map_err(|e| {
-            tracing::error!(error = %e, "could not open the Epic web window");
-            err("window")
-        })?;
-    // Purchases, claims and wishlist changes made there show up after it closes.
-    let handle = app.clone();
-    if let Some(w) = app.get_webview_window(WEB_WINDOW) {
-        w.on_window_event(move |e| {
-            if matches!(e, tauri::WindowEvent::Destroyed) {
-                crate::library::sync_soon(&handle);
-                let h = handle.clone();
-                tauri::async_runtime::spawn(
-                    async move { crate::account::refresh_wallet(&h).await },
-                );
-            }
-        });
-    }
-    Ok(())
-}
-
 /// The address that opens `url` signed in through an exchange code when we have a session
 /// (else `url` itself, as a guest; Epic's page offers its own sign-in).
 pub(crate) async fn signed_in_url(app: &AppHandle, url: &str) -> String {
@@ -704,45 +611,12 @@ pub(crate) async fn signed_in_url(app: &AppHandle, url: &str) -> String {
     }
 }
 
-/// Open any Epic web page in the web window (store pages), signed in when possible.
-pub(crate) async fn open_signed_in(app: &AppHandle, url: &str) -> Result<(), UiError> {
-    let Some(state) = app.try_state::<AppState>() else {
-        return Err(UiError::internal("state"));
-    };
-    let target = signed_in_url(app, url).await;
-    open_web_window(app, &target, state.paths.webview_web.clone())
-}
-
-/// Open an Epic page in the web window, signed in (development check only: the app shows
-/// these pages inside Settings, see `webpane`).
-pub(crate) async fn open_epic_page(app: &AppHandle, page: EpicPage) -> Result<(), UiError> {
-    tracing::info!(?page, "opening Epic page");
-    if page.needs_sign_in() {
-        open_signed_in(app, page.url()).await
-    } else {
-        let Some(state) = app.try_state::<AppState>() else {
-            return Err(UiError::internal("state"));
-        };
-        open_web_window(app, page.url(), state.paths.webview_web.clone())
-    }
-}
-
-/// Open the page Epic asked for in a corrective action (e.g. accept a new policy).
-#[tauri::command]
-#[specta::specta]
-pub async fn open_corrective_action(
-    app: AppHandle,
-    auth: State<'_, AuthState>,
-    state: State<'_, AppState>,
-) -> Result<(), UiError> {
-    let url = auth
-        .corrective_url
-        .lock()
-        .ok()
-        .and_then(|u| u.clone())
+/// The page Epic asked for in a corrective action (e.g. accept a new policy), shown in the app.
+pub(crate) fn corrective_url(app: &AppHandle) -> Result<String, UiError> {
+    app.try_state::<AuthState>()
+        .and_then(|a| a.corrective_url.lock().ok().and_then(|u| u.clone()))
         .ok_or(UiError {
             code: "auth".into(),
             message: "There's nothing Epic needs right now.".into(),
-        })?;
-    open_web_window(&app, &url, state.paths.webview_web.clone())
+        })
 }

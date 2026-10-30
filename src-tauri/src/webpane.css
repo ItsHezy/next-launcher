@@ -79,6 +79,20 @@ unrealengine-navigation,
 unrealengine-footer {
   display: none !important;
 }
+/* Store pages: the header's placeholder, the store's own bar (search, browse, wishlist, cart:
+ * the launcher's top bar has them) and the footer's. Bars that stuck below the store's bar
+ * stick to the top instead. */
+body > div:has(> egs-navigation),
+body > div:has(> egs-navigation) + nav,
+body > div:has(> egs-footer) {
+  display: none !important;
+}
+#app-main-content [class*='_tertiaryNav_'] {
+  top: 0 !important;
+}
+#app-main-content [class*='_sidebar_'] {
+  top: 72px !important;
+}
 /* Account pages: Epic's section menu, then the page. */
 #account-management > .MuiGrid-container > .MuiGrid-item:first-child {
   display: none !important;

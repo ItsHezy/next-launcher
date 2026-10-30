@@ -4,9 +4,11 @@ import {
   commands,
   type StoreFeatured_Serialize as Featured,
   type StoreOffer_Serialize as Offer,
+  type StoreTarget,
   type UiError,
 } from '../bindings';
 import { num } from '../boot';
+import { router } from './router.svelte';
 
 export type Chip = 'featured' | 'free' | 'onSale' | 'newReleases';
 export type { Offer };
@@ -43,12 +45,19 @@ class StoreState {
   setQuery(q: string, now = false) {
     this.query = q;
     this.product = null;
+    if (router.route === 'store') router.web = null;
     clearTimeout(this.#timer);
     this.#timer = setTimeout(() => void this.load(), now ? 0 : 350);
   }
 
   open(offer: Offer) {
     this.product = offer;
+  }
+
+  /** Epic's own store page inside the Store, signed in (no second window): the checkout,
+   *  wishlist, cart. Nothing is bought until the user confirms on Epic's page. */
+  openEpic(target: StoreTarget, title: string) {
+    router.show('store', { kind: 'store', target }, title);
   }
 
   async load(more = false) {

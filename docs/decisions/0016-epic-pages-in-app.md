@@ -38,9 +38,9 @@ is unchanged.
   normally signed in); only if Epic redirects to its login page are they reopened, once, through
   the exchange-code hop. One navigation instead of six, and fewer Cloudflare checks. Other sites
   (store wallet, V-Bucks card) keep the hop, since they don't redirect when signed out.
-- **Not changed:** the store's checkout and product pages, Epic's sign-in page and corrective
-  actions still use their own window (they aren't settings). "Logs folder" still opens the folder
-  in Explorer.
+- **Not changed here:** the store's checkout and product pages, Epic's sign-in page and
+  corrective actions kept their own window; ADR 0017 moved them into the app too. "Logs folder"
+  still opens the folder in Explorer.
 - **Also in-app now:** the app's license and the third-party notices (About) show in a dialog
   instead of opening Notepad (`read_bundled`).
 - **Limits:** toasts that appear while the page is shown are drawn under it. Epic or Cloudflare

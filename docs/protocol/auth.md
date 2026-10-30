@@ -4,7 +4,7 @@ Crate: `egs-auth`. Host: `account-public-service-prod03.ol.epicgames.com` (`ACCO
 
 ## Summary
 
-1. The user signs in on **Epic's own login page** inside an embedded webview. 2FA, captcha,
+1. The user signs in on **Epic's own login page** inside the app (Settings › Account, ADR 0017). 2FA, captcha,
    EULA prompts and parental flows all happen in that page. We never see a password and
    never automate any step.
 2. The page ends at `/id/api/redirect`, which returns a single-use **authorization code**.
@@ -17,7 +17,7 @@ Crate: `egs-auth`. Host: `account-public-service-prod03.ol.epicgames.com` (`ACCO
 
 ### 1a. Redirect flow (primary) — **[OBS] live sign-in 2026-10-28**, with PKCE
 
-Open in a dedicated login webview (own WebView2 data directory, see ADR 0002):
+Shown in the app's Epic view (`webpane.rs`; web profile separate from the UI's, see ADR 0002):
 
 ```
 https://www.epicgames.com/id/login?redirectUrl=<urlencoded R>
@@ -118,7 +118,7 @@ Errors that change UI state:
 |---|---|---|
 | `errors.com.epicgames.account.oauth.authorization_code_not_found` | code used/expired | restart login |
 | `errors.com.epicgames.account.auth_token.invalid_refresh_token` | refresh revoked/expired | sign-in screen (keep cached library visible) |
-| `errors.com.epicgames.oauth.corrective_action_required` | e.g. accept new privacy policy, confirm DOB | open `continuationUrl` in the embedded web window, then retry |
+| `errors.com.epicgames.oauth.corrective_action_required` | e.g. accept new privacy policy, confirm DOB | show `continuationUrl` in the app's Epic view (Settings › Account), then retry |
 | `errors.com.epicgames.account.oauth.single_use_code_not_found` (18001) | bad exchange/auth code **[OBS]** | restart flow |
 
 ## 3. Verify — [REF]
@@ -162,7 +162,7 @@ Route A (preferred, one navigation):
 
 ```
 1. GET  https://ACCOUNT/account/api/oauth/exchange           (bearer)  → <code>
-2. navigate web window to:
+2. navigate the Epic view to:
    https://www.epicgames.com/id/exchange?exchangeCode=<code>&redirectUrl=<urlencoded target>
 ```
 
@@ -170,9 +170,9 @@ Route A (preferred, one navigation):
 Route A opened `accounts.epicgames.com/account/password` already signed in. The SPA redeems the
 code, sets the `www.epicgames.com` session, and `accounts.epicgames.com` completes its own
 `/auth/login` SSO hop silently. This is what the app uses (`auth::signed_in_url`, for the
-Settings view in `webpane.rs` and the store's web window).
+Epic view in `webpane.rs`: Settings pages and store pages, ADR 0016/0017).
 
-Route B (fallback, not needed so far; scripted inside the web window, same origin):
+Route B (fallback, not needed so far; scripted inside the Epic view, same origin):
 
 ```
 1. GET  https://www.epicgames.com/id/api/csrf                → 204, sets cookie XSRF-TOKEN   [OBS]

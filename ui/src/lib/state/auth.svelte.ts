@@ -4,7 +4,7 @@
 import { boot } from '../boot';
 import { commands, events, type AuthStatus_Serialize, type EpicPage } from '../bindings';
 import { library } from './library.svelte';
-import { router, type SettingsSection } from './router.svelte';
+import { router, type Route, type SettingsSection } from './router.svelte';
 import { ui } from './ui.svelte';
 import { account } from './account.svelte';
 
@@ -24,8 +24,12 @@ class AuthState {
 
   signedIn = $derived(this.status.state === 'signedIn');
 
+  /** Where Sign in was pressed: signing in returns there. */
+  #from: Route = 'library';
+
   private apply(s: AuthStatus) {
     this.status = s;
+    this.#leaveSignIn(s);
     if (s.state === 'signedIn') {
       library.account = {
         accountId: s.accountId,
@@ -46,9 +50,22 @@ class AuthState {
     this.apply(await commands.authStatus());
   }
 
-  async signIn() {
-    const res = await commands.signIn();
-    if (res.status === 'error') ui.toast(res.error.message);
+  /** Epic's sign-in page, inside Settings › Account (no second window). */
+  signIn() {
+    this.#from = router.route;
+    router.show('settings', { kind: 'signIn' }, 'Sign in', 'account');
+  }
+
+  /** Epic's sign-in page answered: leave it, or go on to the step Epic asked for. */
+  #leaveSignIn(s: AuthStatus) {
+    if (router.web?.target.kind !== 'signIn' || s.state === 'signingIn') return;
+    if (s.state === 'needsAction') {
+      this.openCorrectiveAction();
+      return;
+    }
+    router.web = null;
+    if (s.state === 'signedOut' && s.reason) ui.toast(s.reason);
+    if (s.state === 'signedIn' && this.#from !== 'settings') router.go(this.#from);
   }
 
   async signOut() {
@@ -62,13 +79,12 @@ class AuthState {
       ui.toast('Sign in first to open your Epic account pages.');
       return;
     }
-    router.go('settings', PAGE_SECTION[page]);
-    router.epicPage = { page, title: PAGE_TITLES[page] };
+    router.show('settings', { kind: 'page', page }, PAGE_TITLES[page], PAGE_SECTION[page]);
   }
 
-  async openCorrectiveAction() {
-    const res = await commands.openCorrectiveAction();
-    if (res.status === 'error') ui.toast(res.error.message);
+  /** The step Epic asked for before the account can be used, inside Settings › Account. */
+  openCorrectiveAction() {
+    router.show('settings', { kind: 'corrective' }, 'Confirm on Epic', 'account');
   }
 }
 

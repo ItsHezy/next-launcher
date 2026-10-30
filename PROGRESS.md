@@ -27,6 +27,12 @@
   pages open in one step instead of six redirects. The license and third-party notices open in a
   dialog instead of Notepad. Verified live with the owner's account (no setting changed): seven
   pages checked, one window throughout, resize and menus handled, new-window links stay in place.
+- **No second window at all** (ADR 0017): Get / Buy now shows Epic's checkout inside the Store,
+  and so do "View on Epic's store", Wishlist and Cart; Epic's sign-in page and corrective steps
+  show inside Settings › Account. Store pages get the app's colours with Epic's bars hidden; the
+  styling no longer runs inside frames (payment, human checks stay Epic's). Verified live (nothing
+  on Epic's pages pressed): checkout of a free giveaway, product page, wishlist, sign-in page in a
+  signed-out folder and cancelling it. A completed sign-in still needs the owner to try.
 
 ## Phase 9 summary (what doesn't need the owner)
 

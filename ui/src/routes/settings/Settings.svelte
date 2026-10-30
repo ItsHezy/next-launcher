@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '../../lib/components/Icon.svelte';
+  import WebPane from '../../lib/components/WebPane.svelte';
   import WindowControls from '../../lib/components/WindowControls.svelte';
   import { account } from '../../lib/state/account.svelte';
   import { auth } from '../../lib/state/auth.svelte';
@@ -7,7 +8,6 @@
   import AboutDiagnostics from './AboutDiagnostics.svelte';
   import AccountCard from './AccountCard.svelte';
   import CloudGames from './CloudGames.svelte';
-  import EpicPane from './EpicPane.svelte';
   import ManageGames from './ManageGames.svelte';
   import SettingRow from './SettingRow.svelte';
   import { ALL_SECTIONS, SECTIONS, type Row, type Section } from './schema';
@@ -16,6 +16,8 @@
   let content = $state<HTMLElement>();
 
   const current = $derived(ALL_SECTIONS.find((s) => s.id === router.section) ?? ALL_SECTIONS[0]!);
+  /** Epic's page shown in this section, if any (the Store shows its own). */
+  const web = $derived(router.route === 'settings' ? router.web : null);
 
   // Live values for the section on screen (Rust caches them for a few minutes).
   $effect(() => {
@@ -47,12 +49,12 @@
 
   // Searching leaves Epic's page.
   $effect(() => {
-    if (query) router.epicPage = null;
+    if (query) router.web = null;
   });
 
   function onkey(e: KeyboardEvent) {
     if (e.key !== 'Escape' || query || router.route !== 'settings') return;
-    if (router.epicPage) router.epicPage = null;
+    if (web) router.web = null;
     else router.go('library');
   }
 </script>
@@ -93,13 +95,13 @@
 
   <main class="main panel">
     <div class="bar" data-tauri-drag-region>
-      {#if router.epicPage}
+      {#if web}
         <div class="crumbs" data-tauri-drag-region>
-          <button class="up" onclick={() => (router.epicPage = null)}>
+          <button class="up" onclick={() => (router.web = null)}>
             <Icon name="chevronLeft" size={20} />
             {current.label}
           </button>
-          <h2 class="h" data-tauri-drag-region>{router.epicPage.title}</h2>
+          <h2 class="h" data-tauri-drag-region>{web.title}</h2>
         </div>
       {:else}
         <h2 class="h" data-tauri-drag-region>{query ? 'Search results' : current.label}</h2>
@@ -107,8 +109,8 @@
       <WindowControls />
     </div>
 
-    {#if router.epicPage}
-      <EpicPane page={router.epicPage.page} />
+    {#if web}
+      <WebPane target={web.target} />
     {:else}
       <div class="content" bind:this={content}>
         <div class="inner">

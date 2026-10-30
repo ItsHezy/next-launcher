@@ -1,5 +1,5 @@
 //! Store (Phase 6): browse, search, free games, product details; wishlist, cart and
-//! checkout open on Epic's own pages in the signed-in web window.
+//! checkout show Epic's own pages inside the app, signed in (`webpane`, ADR 0017).
 //! Spec: docs/protocol/store.md, ADR 0005. Requests: `egs-api::store`.
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -86,7 +86,7 @@ pub enum StoreChip {
     NewReleases,
 }
 
-/// Epic store pages opened in the signed-in web window.
+/// Epic store pages shown inside the app, signed in (`webpane`).
 #[derive(Debug, Clone, Deserialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum StoreTarget {
@@ -105,6 +105,20 @@ pub enum StoreTarget {
     Search {
         query: String,
     },
+}
+
+impl StoreTarget {
+    /// For logs (no ids or search text).
+    pub(crate) fn kind(&self) -> &'static str {
+        match self {
+            Self::Home => "home",
+            Self::Wishlist => "wishlist",
+            Self::Cart => "cart",
+            Self::Product { .. } => "product",
+            Self::Checkout { .. } => "checkout",
+            Self::Search { .. } => "search",
+        }
+    }
 }
 
 fn err(code: &str, message: impl Into<String>) -> UiError {
@@ -483,26 +497,6 @@ pub async fn dev_check(app: &AppHandle, query: &str) -> Result<String, UiError> 
     ))
 }
 
-/// Dev tooling (`--dev-action open:<wishlist|cart|product=<slug>|checkout=<ns>/<offer>>`).
-pub async fn dev_open(app: &AppHandle, spec: &str) -> Result<String, UiError> {
-    let target = match spec.split_once('=') {
-        Some(("product", slug)) => StoreTarget::Product { slug: slug.into() },
-        Some(("checkout", rest)) => match rest.split_once('/') {
-            Some((namespace, offer_id)) => StoreTarget::Checkout {
-                namespace: namespace.into(),
-                offer_id: offer_id.into(),
-            },
-            None => return Err(err("dev", "checkout=<ns>/<offer>")),
-        },
-        _ if spec == "wishlist" => StoreTarget::Wishlist,
-        _ if spec == "cart" => StoreTarget::Cart,
-        _ => StoreTarget::Home,
-    };
-    store_open(app.clone(), target)
-        .await
-        .map(|_| "opened".into())
-}
-
 /// Ids and slugs we put into Epic URLs: letters, digits, `-` and `_` only.
 fn safe_id(s: &str) -> bool {
     !s.is_empty()
@@ -533,18 +527,15 @@ fn target_url(target: &StoreTarget, locale: &str) -> Result<String, UiError> {
     })
 }
 
-/// Open an Epic store page in the signed-in web window (wishlist, cart, checkout...).
-/// Purchases always finish there, by the user; we never press anything on that page.
-#[tauri::command]
-#[specta::specta]
-pub async fn store_open(app: AppHandle, target: StoreTarget) -> Result<(), UiError> {
+/// The address of a store page (wishlist, cart, checkout...) in the app's language. It shows
+/// inside the app, signed in (`webpane`). Purchases always finish there, by the user; we never
+/// press anything on that page.
+pub(crate) fn page_url(app: &AppHandle, target: &StoreTarget) -> Result<String, UiError> {
     let state = app
         .try_state::<AppState>()
         .ok_or_else(|| UiError::internal("app state"))?;
     let (_, locale) = region(&state);
-    let url = target_url(&target, &locale)?;
-    tracing::info!(page = ?std::mem::discriminant(&target), "opening Epic store page");
-    crate::auth::open_signed_in(&app, &url).await
+    target_url(target, &locale)
 }
 
 #[cfg(test)]
