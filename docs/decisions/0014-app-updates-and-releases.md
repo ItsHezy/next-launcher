@@ -2,7 +2,8 @@
 
 Status: Accepted (2026-10-30), owner's decision: releases on **GitHub Releases**
 (`ItsHezy/next-launcher`, public). Update public key set (minisign key ID `FBF6DA559F103AFF`).
-Open: the signing secrets in the repository, and (optionally) a code-signing certificate.
+Signing secrets set; **v0.1.0 released** through this pipeline. Open (optional): a code-signing
+certificate.
 
 - **Updater: `tauri-plugin-updater`** (+287 KB exe, +~115 KB installer; below the 500 KB line). It
   reads `latest.json` from the newest published release
