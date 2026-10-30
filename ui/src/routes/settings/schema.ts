@@ -28,7 +28,7 @@ export type Action =
   | { type: 'import' }
   /** An in-app dialog; `fallback` opens instead when Epic doesn't let us do it in-app. */
   | { type: 'dialog'; dialog: 'displayName' | 'language' | 'redeem' | 'hidden' | 'licenses'; fallback?: EpicPage }
-  | { type: 'cmd'; cmd: 'checkConnection' | 'checkFolder' | 'checkDisk' | 'openLogs' };
+  | { type: 'cmd'; cmd: 'checkConnection' | 'checkFolder' | 'checkDisk' | 'openLogs' | 'openLicense' };
 
 export interface Group {
   title?: string;
@@ -361,7 +361,7 @@ export const SECTIONS: Section[][] = [
             { kind: 'web', label: 'Publisher Index', action: web('publisherIndex') },
             { kind: 'web', label: 'End User License Agreement', action: web('eula') },
           ],
-          footer: 'Next Launcher is an independent client and is not made by Epic Games.',
+          footer: 'Next Launcher is an independent, free (GPL-3.0-or-later) client and is not made by Epic Games.',
         },
       ],
     },
@@ -375,6 +375,13 @@ export const SECTIONS: Section[][] = [
         {
           rows: [
             { kind: 'info', label: 'Version', value: '{version}' },
+            {
+              kind: 'value',
+              label: 'License',
+              desc: 'Free software: you may share and change it under the GPL',
+              value: 'GNU GPL v3 or later',
+              action: cmd('openLicense'),
+            },
             { kind: 'button', label: 'Check for updates', button: 'Check', action: soon('App updates', 9) },
             { kind: 'value', label: 'Open-source licenses', value: '', action: { type: 'dialog', dialog: 'licenses' } },
           ],

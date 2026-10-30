@@ -79,8 +79,7 @@ export const commands = {
 	setHidden: (appName: string, hidden: boolean) => typedError<null, UiError>(__TAURI_INVOKE("set_hidden", { appName, hidden })),
 	/**  Let the user pick a folder (Windows' own folder dialog). `None` if cancelled. */
 	pickFolder: (title: string) => typedError<string | null, UiError>(__TAURI_INVOKE("pick_folder", { title })),
-	/**  Open the third-party notices that ship with the app (Settings → About). */
-	openNotices: () => typedError<null, UiError>(__TAURI_INVOKE("open_notices")),
+	openBundled: (doc: BundledDoc) => typedError<null, UiError>(__TAURI_INVOKE("open_bundled", { doc })),
 	cloudSaveStatus: (appName: string) => typedError<SaveStatus_Serialize, UiError>(__TAURI_INVOKE("cloud_save_status", { appName })),
 	/**  Installed games whose catalog entry supports cloud saves (no network). */
 	cloudSaveGames: () => typedError<SaveStatus_Serialize[], UiError>(__TAURI_INVOKE("cloud_save_games")),
@@ -211,6 +210,11 @@ export type AuthStatus_Serialize =
 { state: "offline"; displayName: string; retryInSecs: number } | 
 /**  Epic wants the user to finish something on its website first. */
 { state: "needsAction"; displayName: string; action: string };
+
+/**  Documents that ship with the app (Settings → About). */
+export type BundledDoc = 
+/**  GPL-3.0-or-later (ADR 0001). */
+"license" | "thirdPartyNotices";
 
 /**  What the launcher token may do, from `verify?includePerms=true` (account.md). */
 export type Capabilities = {

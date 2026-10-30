@@ -36,7 +36,8 @@ are not comparable (a game was running; see `docs/perf.md`).
 Needs the owner:
 1. **Code-signing certificate** for the installer (unsigned installers trigger SmartScreen).
 2. **App updater**: where updates are hosted (e.g. GitHub Releases) and an update signing key pair.
-3. **License** (ADR 0001).
+3. ~~License~~: GPL-3.0-or-later, applied (`LICENSE`, crate and package metadata, shipped with the
+   installer, shown in Settings → About).
 
 ## Phase 8 summary
 
@@ -265,7 +266,7 @@ Known gaps:
 
 ## Open decisions for the owner
 
-1. **License** (ADR 0001): GPL-3.0-or-later recommended, or MIT.
+1. ~~License~~: decided 2026-10-30, **GPL-3.0-or-later** (ADR 0001).
 2. **Image format** (ADR 0004): store CDN-resized JPEG/WebP as-is instead of transcoding to WebP.
 3. **Warm start**: ~390–450 ms on an idle machine (WebView2 window creation alone is ~300–350 ms).
    Phase 9 adds close-to-tray (default on) with a ~31 ms reopen. Recommendation: accept.

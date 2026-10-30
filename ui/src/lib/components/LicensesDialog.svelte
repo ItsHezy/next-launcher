@@ -24,7 +24,7 @@
   });
 
   async function openNotices() {
-    const res = await commands.openNotices();
+    const res = await commands.openBundled('thirdPartyNotices');
     if (res.status === 'error') ui.toast(res.error.message);
   }
 </script>

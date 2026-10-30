@@ -45,8 +45,10 @@
         "compression": "lzma"
       }
     },
-    "resources": [
-      "THIRD-PARTY-NOTICES.txt"
-    ]
+    "resources": {
+      "THIRD-PARTY-NOTICES.txt": "THIRD-PARTY-NOTICES.txt",
+      "../LICENSE": "LICENSE.txt"
+    },
+    "license": "GPL-3.0-or-later"
   }
 }

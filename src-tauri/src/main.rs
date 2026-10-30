@@ -144,7 +144,7 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             support::hidden_games,
             support::set_hidden,
             support::pick_folder,
-            support::open_notices,
+            support::open_bundled,
             saves::cloud_save_status,
             saves::cloud_save_games,
             saves::cloud_save_sync,

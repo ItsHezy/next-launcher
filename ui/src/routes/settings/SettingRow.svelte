@@ -69,6 +69,8 @@
       else if (a.cmd === 'checkDisk') void check(commands.checkDisk);
       else if (a.cmd === 'openLogs')
         void commands.openLogsFolder().then((r) => r.status === 'error' && ui.toast(r.error.message));
+      else if (a.cmd === 'openLicense')
+        void commands.openBundled('license').then((r) => r.status === 'error' && ui.toast(r.error.message));
     } else comingSoon(a.what, a.phase);
   }
 
