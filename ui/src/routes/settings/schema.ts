@@ -27,7 +27,7 @@ export type Action =
   | { type: 'goto'; section: SettingsSection }
   | { type: 'import' }
   /** An in-app dialog; `fallback` opens instead when Epic doesn't let us do it in-app. */
-  | { type: 'dialog'; dialog: 'displayName' | 'language' | 'redeem' | 'hidden'; fallback?: EpicPage }
+  | { type: 'dialog'; dialog: 'displayName' | 'language' | 'redeem' | 'hidden' | 'licenses'; fallback?: EpicPage }
   | { type: 'cmd'; cmd: 'checkConnection' | 'checkFolder' | 'checkDisk' | 'openLogs' };
 
 export interface Group {
@@ -48,7 +48,6 @@ export interface Section {
 const web = (page: EpicPage): Action => ({ type: 'web', page });
 const soon = (what: string, phase: number): Action => ({ type: 'soon', what, phase });
 const cmd = (c: Extract<Action, { type: 'cmd' }>['cmd']): Action => ({ type: 'cmd', cmd: c });
-const LATER = 'Arrives with the tray, autostart and notifications update';
 
 export const SECTIONS: Section[][] = [
   [
@@ -142,9 +141,14 @@ export const SECTIONS: Section[][] = [
           title: 'App',
           rows: [
             { kind: 'select', label: 'Language', key: 'general.language', options: [{ value: 'en-US', label: 'English (US)' }] },
-            { kind: 'toggle', label: 'Run at startup', key: 'general.runAtStartup', disabled: LATER },
-            { kind: 'toggle', label: 'Start minimized', key: 'general.startMinimized', disabled: LATER },
-            { kind: 'toggle', label: 'Minimize to tray on close', key: 'general.minimizeToTray', disabled: LATER },
+            { kind: 'toggle', label: 'Run at startup', desc: 'Start Next Launcher when you sign in to Windows', key: 'general.runAtStartup' },
+            { kind: 'toggle', label: 'Start minimized', desc: 'When Windows starts it, stay in the tray', key: 'general.startMinimized' },
+            {
+              kind: 'toggle',
+              label: 'Minimize to tray on close',
+              desc: 'Closing the window keeps Next Launcher in the tray; quit from the tray menu',
+              key: 'general.minimizeToTray',
+            },
             {
               kind: 'select',
               label: 'Open on',
@@ -247,18 +251,18 @@ export const SECTIONS: Section[][] = [
         {
           title: 'Notify me about',
           rows: [
-            { kind: 'toggle', label: 'Free games', key: 'notifications.freeGames', disabled: LATER },
-            { kind: 'toggle', label: 'News & offers', key: 'notifications.newsOffers', disabled: LATER },
+            { kind: 'toggle', label: 'Free games', desc: "When this week's free games change", key: 'notifications.freeGames' },
+            { kind: 'toggle', label: 'News & offers', key: 'notifications.newsOffers', disabled: 'No news source from Epic yet' },
             { kind: 'toggle', label: 'Chat messages', key: 'notifications.chat', disabled: 'Available when friends & chat are supported' },
             { kind: 'toggle', label: 'Invites', key: 'notifications.invites', disabled: 'Available when friends & chat are supported' },
-            { kind: 'toggle', label: 'Download finished', key: 'notifications.downloadFinished', disabled: LATER },
+            { kind: 'toggle', label: 'Download finished', desc: 'Installs and updates', key: 'notifications.downloadFinished' },
           ],
         },
         {
           title: 'Behavior',
           rows: [
-            { kind: 'toggle', label: 'Play a sound', key: 'notifications.sound', disabled: LATER },
-            { kind: 'toggle', label: 'Do not disturb while playing', key: 'notifications.dndWhilePlaying', disabled: LATER },
+            { kind: 'toggle', label: 'Play a sound', key: 'notifications.sound' },
+            { kind: 'toggle', label: 'Do not disturb while playing', desc: 'No notifications while a game runs', key: 'notifications.dndWhilePlaying' },
           ],
         },
       ],
@@ -372,7 +376,7 @@ export const SECTIONS: Section[][] = [
           rows: [
             { kind: 'info', label: 'Version', value: '{version}' },
             { kind: 'button', label: 'Check for updates', button: 'Check', action: soon('App updates', 9) },
-            { kind: 'web', label: 'Open-source licenses', action: soon('License list', 9) },
+            { kind: 'value', label: 'Open-source licenses', value: '', action: { type: 'dialog', dialog: 'licenses' } },
           ],
         },
       ],

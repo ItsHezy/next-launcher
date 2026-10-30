@@ -11,7 +11,32 @@
 - [x] **Phase 6: Store** (2026-10-29). Live store: Featured, free games, on sale, new releases, search, product pages; wishlist, cart and checkout on Epic's own pages, signed in.
 - [x] **Phase 7: Settings, wallet, profile menu** (2026-10-29). Real account, connections and wallet data; in-app edits where Epic permits; every other row opens Epic's verified page, signed in.
 - [x] **Phase 8: Cloud saves** (2026-10-29). Download, upload, conflict handling and launch/exit sync verified with one game; local saves always backed up before a download.
-- [ ] Phase 9: Polish and ship
+- [~] **Phase 9: Polish and ship** (2026-10-30). Tray, autostart, notifications, crash-safe updates, accessibility, notices done. Signing, updater and license wait for the owner.
+
+## Phase 9 summary (what doesn't need the owner)
+
+What works (verified live unless noted):
+- **Tray**: icon while the app runs; Open, Quick Launch games, download status with pause/resume,
+  Quit. Closing the window hides it to the tray (default on, like the official launcher);
+  reopening takes ~31 ms. A second start shows the running window.
+- **Run at startup** and **Start minimized**: the per-user Run entry is written when turned on and
+  removed when turned off (verified, nothing left behind).
+- **Notifications**: free games this week (shown live), download finished, sound on/off, quiet while
+  playing.
+- **Crash-safe updates**: an interrupted apply finishes on the next run; launching is refused until
+  then (unit-tested, including a crash after the moves).
+- **Accessibility**: 0 axe-core violations on 17 views, every clickable element ≥ 44 px, dialogs keep
+  keyboard focus inside and give it back; `main` landmark and store card names fixed.
+- **Open-source notices**: 326 components listed in Settings → About; full texts ship with the installer.
+- 118 Rust tests.
+
+Measured: idle 103.0 MB / 0.04 % CPU, installer 3.45 MiB, tray reopen 31 ms. Startup times this round
+are not comparable (a game was running; see `docs/perf.md`).
+
+Needs the owner:
+1. **Code-signing certificate** for the installer (unsigned installers trigger SmartScreen).
+2. **App updater**: where updates are hosted (e.g. GitHub Releases) and an update signing key pair.
+3. **License** (ADR 0001).
 
 ## Phase 8 summary
 
@@ -242,10 +267,10 @@ Known gaps:
 
 1. **License** (ADR 0001): GPL-3.0-or-later recommended, or MIT.
 2. **Image format** (ADR 0004): store CDN-resized JPEG/WebP as-is instead of transcoding to WebP.
-3. **Warm start**: ~370–450 ms across phases and runs (at or just over the 400 ms line; WebView2
-   window creation alone is ~320–350 ms). Options unchanged: accept plus tray reopen (Phase 9),
-   or try WebView2 flags (risk to scroll smoothness).
+3. **Warm start**: ~390–450 ms on an idle machine (WebView2 window creation alone is ~300–350 ms).
+   Phase 9 adds close-to-tray (default on) with a ~31 ms reopen. Recommendation: accept.
 4. **Mockup access**: sign in to claude.ai in the app's browser pane, or share screenshots.
+5. **Signing certificate and update hosting** (Phase 9, see above).
 
 ## Conventions
 

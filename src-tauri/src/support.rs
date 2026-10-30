@@ -159,6 +159,26 @@ pub fn open_logs_folder(state: State<'_, AppState>) -> Result<(), UiError> {
     egs_launch::process::open_with_shell(&dir).map_err(|e| err("open", e.to_string()))
 }
 
+/// Open the third-party notices that ship with the app (Settings → About).
+#[tauri::command]
+#[specta::specta]
+pub fn open_notices(app: AppHandle) -> Result<(), UiError> {
+    let path = app
+        .path()
+        .resource_dir()
+        .map(|d| d.join("THIRD-PARTY-NOTICES.txt"))
+        .ok()
+        .filter(|p| p.is_file())
+        .ok_or_else(|| {
+            err(
+                "notices",
+                "The notices file isn't installed with this copy of Next Launcher.",
+            )
+        })?;
+    egs_launch::process::open_with_shell(&path.to_string_lossy())
+        .map_err(|e| err("open", e.to_string()))
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn hidden_games(state: State<'_, AppState>) -> Result<Vec<HiddenGame>, UiError> {

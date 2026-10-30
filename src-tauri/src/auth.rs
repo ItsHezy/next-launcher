@@ -316,6 +316,9 @@ async fn after_sign_in(app: AppHandle, acct: AccountSummary, epoch: u64) {
         // Playtime kept from offline sessions goes first, so the sync sees Epic's new totals.
         crate::launch::flush_playtime(&app).await;
         crate::library::sync_soon(&app);
+        // This week's free games, if they're new to the user (Settings → Notifications).
+        let notify_app = app.clone();
+        tauri::async_runtime::spawn(async move { crate::notify::free_games(&notify_app).await });
         // Downloads interrupted by closing the app continue (they need the session).
         crate::install::kick(&app);
     }

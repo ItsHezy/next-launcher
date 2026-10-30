@@ -54,6 +54,10 @@
     else if (a.type === 'goto') router.go('settings', a.section);
     else if (a.type === 'web') void auth.openEpicPage(a.page);
     else if (a.type === 'dialog') {
+      if (a.dialog === 'licenses') {
+        ui.dialog = { kind: 'licenses' };
+        return;
+      }
       const inApp =
         a.dialog === 'hidden' ||
         (a.dialog === 'redeem' ? account.caps?.redeem : account.caps?.updateAccount) === true;

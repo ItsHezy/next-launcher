@@ -22,6 +22,8 @@ pub struct AppState {
     /// Dev tooling (`--dev-action <action>:<app>`).
     pub dev_action: Option<String>,
     pub shown: AtomicBool,
+    /// Started at sign-in with "Start minimized": stay in the tray.
+    pub start_hidden: bool,
 }
 
 /// Error shape the UI receives. `message` is written for people; details go to the log.
@@ -85,11 +87,42 @@ pub fn show_main(app: &AppHandle, reason: &str) {
     if state.shown.swap(true, Ordering::SeqCst) {
         return;
     }
+    if state.start_hidden {
+        startup::mark(&format!("window_kept_in_tray ({reason})"));
+        return;
+    }
     if let Some(win) = app.get_webview_window("main") {
         let _ = win.show();
         let _ = win.set_focus();
     }
     startup::mark(&format!("window_shown ({reason})"));
+}
+
+/// An on/off setting, with the same default the UI shows (ui/src/lib/state/settings.svelte.ts).
+pub fn setting_on(cache: &Cache, key: &str) -> bool {
+    let default = matches!(
+        key,
+        "general.minimizeToTray"
+            | "general.showUninstalled"
+            | "downloads.pauseWhilePlaying"
+            | "downloads.autoUpdate"
+            | "notifications.freeGames"
+            | "notifications.downloadFinished"
+            | "notifications.sound"
+            | "notifications.dndWhilePlaying"
+            | "cloud.enabled"
+            | "cloud.syncOnStart"
+            | "cloud.syncOnExit"
+    );
+    settings_value(cache, key)
+        .map(|v| v == "true")
+        .unwrap_or(default)
+}
+
+/// "Minimize to tray on close" (on by default, like the official launcher).
+pub fn close_to_tray<R: tauri::Runtime>(app: &AppHandle<R>) -> bool {
+    app.try_state::<AppState>()
+        .is_some_and(|s| setting_on(&s.cache, "general.minimizeToTray"))
 }
 
 /// Called by the UI after its first frame is painted. Shows the window.
@@ -206,6 +239,9 @@ pub fn set_setting(
     state.cache.set_setting(&key, &value.to_json())?;
     match key.as_str() {
         "downloads.limitMbps" => crate::install::apply_speed_limit(&app),
+        "general.runAtStartup" => {
+            crate::autostart::apply(&app);
+        }
         // Read before logging starts, so it lives in a marker file (applies on restart).
         "support.debugLogging" => {
             let marker = state.paths.debug_marker();
@@ -247,6 +283,7 @@ pub fn window_action(window: WebviewWindow, action: WindowAction) {
             _ => window.maximize(),
         },
         // Phase 9: honour "minimize to tray on close".
+        WindowAction::Close if close_to_tray(window.app_handle()) => window.hide(),
         WindowAction::Close => window.close(),
     };
     if let Err(e) = result {

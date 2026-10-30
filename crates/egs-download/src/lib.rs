@@ -9,8 +9,8 @@ pub mod relocate;
 pub mod verify;
 
 pub use engine::{
-    commit_staged, run, safe_join, Control, DlError, EngineConfig, FetchFn, Limiter, Outcome,
-    Progress,
+    commit_interrupted, commit_staged, run, safe_join, Control, DlError, EngineConfig, FetchFn,
+    Limiter, Outcome, Progress,
 };
 pub use plan::{plan, Fetch, FileJob, Piece, Plan, PlanOptions, Source};
 pub use relocate::{move_dir, Moved};

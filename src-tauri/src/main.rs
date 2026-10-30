@@ -2,6 +2,7 @@
 
 mod account;
 mod auth;
+mod autostart;
 mod commands;
 mod console;
 mod disk;
@@ -10,6 +11,7 @@ mod install;
 mod launch;
 mod library;
 mod logging;
+mod notify;
 mod paths;
 mod protocol;
 mod redact;
@@ -17,6 +19,7 @@ mod saves;
 mod startup;
 mod store;
 mod support;
+mod tray;
 
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
@@ -48,6 +51,8 @@ struct Args {
     mock_games: usize,
     data_dir: Option<PathBuf>,
     reset: bool,
+    /// Started by Windows at sign-in (the Run entry passes it).
+    autostart: bool,
 }
 
 fn parse_args() -> Args {
@@ -62,6 +67,7 @@ fn parse_args() -> Args {
         mock_games: 0,
         data_dir: None,
         reset: false,
+        autostart: false,
     };
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
@@ -69,6 +75,7 @@ fn parse_args() -> Args {
             "--bench-startup" => args.bench = true,
             "--bench-scroll" => args.bench_scroll = true,
             "--reset-data" => args.reset = true,
+            "--autostart" => args.autostart = true,
             "--mock-games" => {
                 if let Some(n) = it.next().and_then(|v| v.parse().ok()) {
                     args.mock_games = n;
@@ -137,6 +144,7 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             support::hidden_games,
             support::set_hidden,
             support::pick_folder,
+            support::open_notices,
             saves::cloud_save_status,
             saves::cloud_save_games,
             saves::cloud_save_sync,
@@ -291,17 +299,15 @@ fn main() {
     let dev_install_root = args.dev_install_root.clone();
     let dev_probe_sizes = args.dev_probe_sizes;
     let dev_action = args.dev_action.clone();
+    let autostart = args.autostart;
     if let Some(root) = &dev_install_root {
         tracing::info!(root = %root.display(), "development install guard active");
     }
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(w) = app.get_webview_window("main") {
-                let _ = w.unminimize();
-                let _ = w.show();
-                let _ = w.set_focus();
-            }
+            tray::show_window(app)
         }))
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(invoke)
         .register_asynchronous_uri_scheme_protocol(protocol::SCHEME, |ctx, request, responder| {
             let Some(state) = ctx.app_handle().try_state::<AppState>() else {
@@ -320,6 +326,10 @@ fn main() {
                 Err(_) => boot_failed(&anyhow::anyhow!("boot thread panicked"))?,
             };
             let proxy = proxy_setting(&boot.cache);
+            // "Start minimized" applies when Windows starts the app at sign-in.
+            let start_hidden = autostart
+                && commands::settings_value(&boot.cache, "general.startMinimized").as_deref()
+                    == Some("true");
             app.manage(AppState {
                 cache: boot.cache,
                 paths: paths.clone(),
@@ -328,6 +338,7 @@ fn main() {
                 dev_probe_sizes,
                 dev_action: dev_action.clone(),
                 shown: AtomicBool::new(false),
+                start_hidden,
             });
             app.manage(auth::AuthState::new(api_client(proxy)?, boot.auth));
             app.manage(library::LibraryState::default());
@@ -352,11 +363,29 @@ fn main() {
             startup::mark("window_built");
             // Closing the main window quits, even while an Epic web window is open.
             let quit = app.handle().clone();
-            main.on_window_event(move |e| {
-                if matches!(e, tauri::WindowEvent::Destroyed) {
-                    quit.exit(0);
+            main.on_window_event(move |e| match e {
+                // "Minimize to tray on close": Alt+F4 and the taskbar's Close hide instead.
+                tauri::WindowEvent::CloseRequested { api, .. }
+                    if commands::close_to_tray(&quit) =>
+                {
+                    api.prevent_close();
+                    if let Some(w) = quit.get_webview_window("main") {
+                        let _ = w.hide();
+                    }
                 }
+                tauri::WindowEvent::Destroyed => quit.exit(0),
+                _ => {}
             });
+            // Keep the Run entry pointing at this exe (e.g. after an update moved it).
+            if commands::settings_value(&app.state::<AppState>().cache, "general.runAtStartup")
+                .as_deref()
+                == Some("true")
+            {
+                autostart::apply(app.handle());
+            }
+            if let Err(e) = tray::setup(app.handle()) {
+                tracing::warn!(error = %e, "tray icon unavailable");
+            }
 
             let handle = app.handle().clone();
             std::thread::spawn(move || {

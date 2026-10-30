@@ -8,6 +8,18 @@ AMD Ryzen 5 5600X (6C/12T), 32 GB RAM, NVMe SSD, RTX 3060 Ti, 200 Hz display, Wi
 10.0.26200, WebView2 runtime 156.0.4314.50. That's upper mid-range; numbers on a true mid-range PC
 will be somewhat higher.
 
+## Phase 9 (2026-10-30): polish
+
+| Metric | Budget | Measured |
+|---|---|---|
+| Reopen from the tray (window hidden → visible), 5 runs | | **31 ms** (76 ms first) |
+| Idle RAM / CPU, signed in, tray icon present | ≤ 150 MB / ~0 % | **103.0 MB / 0.04 %** ✅ |
+| Installer (NSIS, incl. 830 KB of license texts) | ≤ 15 MB | **3.45 MiB** ✅ (exe 9.01 MiB) |
+| Initial / total JS (gz) | 80 / 250 KB | 38.5 / 70.3 KB ✅ (licenses list lazy) |
+| Notification plugin cost | ≤ 500 KB per dependency | +207 KB exe, +62 KB installer |
+| Accessibility (axe-core, 17 views, + 44 px hit targets) | 0 serious | **0 violations** ✅ |
+| Warm / cold start, median of 9 | ≤ 400 ms / ≤ 1.0 s | 587 / 651 ms **not comparable**: a game (≈ 4 cores busy) was running. The Phase 8 exe measured at the same time: 608 ms warm. To re-measure on an idle machine. |
+
 ## Phase 8 (2026-10-29): cloud saves
 
 | Metric | Budget | Measured |

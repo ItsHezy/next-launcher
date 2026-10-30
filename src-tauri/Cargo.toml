@@ -21,7 +21,7 @@ egs-download = { path = "../crates/egs-download" }
 egs-launch = { path = "../crates/egs-launch" }
 getrandom = "0.3"
 tokio = { version = "1", features = ["rt", "time", "sync"] }
-tauri = { version = "2.12", features = [] }
+tauri = { version = "2.12", features = ["tray-icon"] }
 tauri-plugin-single-instance = "2.5"
 tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
 specta = { version = "=2.0.0-rc.26", features = ["derive"] }
@@ -34,6 +34,7 @@ tracing.workspace = true
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi", "smallvec", "std"] }
 tracing-appender = "0.2"
 regex-lite = "0.1"
+tauri-plugin-notification = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
@@ -44,6 +45,7 @@ windows-sys = { version = "0.61", features = [
     "Win32_UI_Shell_Common",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_System_SystemInformation",
+    "Win32_System_Registry",
 ] }
 
 [dev-dependencies]

@@ -641,33 +641,47 @@ pub async fn auto_update(app: &AppHandle) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn pause_download(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    downloads: State<'_, DownloadsState>,
-    id: f64,
-) -> Result<(), UiError> {
-    let id = id as i64;
+pub fn pause_download(app: AppHandle, id: f64) -> Result<(), UiError> {
+    pause_job(&app, id as i64);
+    Ok(())
+}
+
+/// Pause a download (button, tray). The worker records the state when the engine stops.
+pub fn pause_job(app: &AppHandle, id: i64) {
+    let (Some(state), Some(downloads)) = (
+        app.try_state::<AppState>(),
+        app.try_state::<DownloadsState>(),
+    ) else {
+        return;
+    };
     let running = downloads
         .controls
         .lock()
         .ok()
         .and_then(|c| c.get(&id).cloned());
     match running {
-        Some(ctl) => ctl.pause(), // the worker records the state when the engine stops
-        None => state.cache.set_download_state(id, "paused", None)?,
+        Some(ctl) => ctl.pause(),
+        None => {
+            let _ = state.cache.set_download_state(id, "paused", None);
+        }
     }
-    emit_changed(&app, "download");
-    Ok(())
+    emit_changed(app, "download");
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn resume_download(app: AppHandle, state: State<'_, AppState>, id: f64) -> Result<(), UiError> {
-    state.cache.set_download_state(id as i64, "queued", None)?;
-    emit_changed(&app, "download");
-    kick(&app);
+pub fn resume_download(app: AppHandle, id: f64) -> Result<(), UiError> {
+    resume_job(&app, id as i64);
     Ok(())
+}
+
+/// Resume a paused or stopped download (button, tray).
+pub fn resume_job(app: &AppHandle, id: i64) {
+    if let Some(state) = app.try_state::<AppState>() {
+        let _ = state.cache.set_download_state(id, "queued", None);
+    }
+    emit_changed(app, "download");
+    kick(app);
 }
 
 #[tauri::command]
@@ -1187,6 +1201,25 @@ async fn run_job(app: &AppHandle, job: &DownloadJob) -> Result<(), UiError> {
                 "download finished"
             );
             emit_changed(app, "download");
+            match job.kind.as_str() {
+                "install" => {
+                    crate::notify::send(
+                        app,
+                        crate::notify::Kind::DownloadFinished,
+                        &format!("{} is ready to play", game.title),
+                        "The download finished.",
+                    );
+                }
+                "update" => {
+                    crate::notify::send(
+                        app,
+                        crate::notify::Kind::DownloadFinished,
+                        &format!("{} was updated", game.title),
+                        "The update finished.",
+                    );
+                }
+                _ => {}
+            }
             let verify_after = settings_value(&state.cache, "downloads.verifyAfterInstall")
                 .is_some_and(|v| v == "true");
             if job.kind == "install" && verify_after {

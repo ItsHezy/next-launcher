@@ -263,6 +263,23 @@ async fn free_games(state: &AppState, auth: &AuthState) -> Result<Vec<StoreOffer
         .collect())
 }
 
+/// Free right now (id, title), for the weekly free-games notification. Uses the cache.
+pub async fn free_now(app: &AppHandle) -> Result<Vec<(String, String)>, UiError> {
+    let state = app
+        .try_state::<AppState>()
+        .ok_or_else(|| UiError::internal("app state"))?;
+    let auth = app
+        .try_state::<AuthState>()
+        .ok_or_else(|| UiError::internal("auth state"))?;
+    let now = egs_api::launch::iso8601(now_secs() * 1000);
+    Ok(free_games(&state, &auth)
+        .await?
+        .into_iter()
+        .filter(|o| o.free_from.as_deref().is_some_and(|f| f <= now.as_str()))
+        .map(|o| (o.id, o.title))
+        .collect())
+}
+
 async fn browse_page(
     state: &AppState,
     auth: &AuthState,

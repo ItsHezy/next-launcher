@@ -12,7 +12,8 @@
   let failed = $state(false);
 </script>
 
-<button class="card" onclick={() => store.open(offer)} aria-label="{offer.title}{priceText ? `, ${priceText}` : ''}">
+<!-- The visible text (title, seller, badge, price) is the button's name: no aria-label. -->
+<button class="card" onclick={() => store.open(offer)}>
   <span class="art">
     {#if offer.imageTall && !failed}
       <img src={offer.imageTall} alt="" loading="lazy" decoding="async" onerror={() => (failed = true)} />

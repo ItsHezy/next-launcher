@@ -449,11 +449,26 @@ async fn write_all(
 
 /// Move a finished staged update into the install and apply deletions.
 /// Every staged file was already verified; renames on one volume are fast.
+/// Present in the staging folder while a commit is moving files: the install is a mix of
+/// old and new files until the commit finishes (callers refuse to launch meanwhile).
+pub const COMMITTING_MARKER: &str = ".nl-committing";
+
+/// True when an earlier commit was interrupted (crash, power loss) and must be finished.
+pub fn commit_interrupted(install: &Path) -> bool {
+    install.join(".nl-staging").join(COMMITTING_MARKER).exists()
+}
+
+/// Move staged files over the install, then delete files the update removed. Safe to run
+/// again after an interruption: files already moved are simply no longer in staging.
 pub async fn commit_staged(
     staging: &Path,
     install: &Path,
     delete: &[String],
 ) -> Result<(), DlError> {
+    // The staging folder may already be gone if a crash came after the moves but before
+    // the install was recorded; then only the deletions remain.
+    tokio::fs::create_dir_all(staging).await?;
+    tokio::fs::write(staging.join(COMMITTING_MARKER), b"").await?;
     let mut stack = vec![staging.to_path_buf()];
     while let Some(d) = stack.pop() {
         let mut rd = tokio::fs::read_dir(&d).await?;
@@ -463,7 +478,9 @@ pub async fn commit_staged(
                 stack.push(p);
                 continue;
             }
-            if p.to_string_lossy().ends_with(".nl-tmp") {
+            if p.to_string_lossy().ends_with(".nl-tmp")
+                || p.file_name() == Some(COMMITTING_MARKER.as_ref())
+            {
                 continue;
             }
             let rel = p
@@ -892,6 +909,50 @@ mod tests {
         assert_eq!(&f[..400], &a[..400]);
         assert_eq!(&f[400..], &b[..300]);
         assert!(!install.join("gone").exists() && !staging.exists());
+        assert!(!commit_interrupted(&install));
+    }
+
+    /// A crash part-way through a commit: some files moved, the marker left behind. Running
+    /// the commit again finishes it.
+    #[tokio::test]
+    async fn interrupted_commit_finishes_on_the_next_run() {
+        let dir = tempfile::tempdir().unwrap();
+        let install = dir.path().join("game");
+        let staging = install.join(".nl-staging");
+        std::fs::create_dir_all(staging.join("sub")).unwrap();
+        std::fs::write(install.join("a"), b"old a").unwrap();
+        std::fs::write(install.join("b"), b"old b").unwrap();
+        std::fs::write(install.join("removed"), b"x").unwrap();
+        // What the crash left: `a` already moved, `sub/b2` and `b` still staged, marker present.
+        std::fs::write(install.join("a"), b"new a").unwrap();
+        std::fs::write(staging.join("b"), b"new b").unwrap();
+        std::fs::write(staging.join("sub").join("b2"), b"new b2").unwrap();
+        std::fs::write(staging.join(COMMITTING_MARKER), b"").unwrap();
+        assert!(commit_interrupted(&install));
+
+        commit_staged(&staging, &install, &["removed".to_owned()])
+            .await
+            .unwrap();
+        assert_eq!(std::fs::read(install.join("a")).unwrap(), b"new a");
+        assert_eq!(std::fs::read(install.join("b")).unwrap(), b"new b");
+        assert_eq!(
+            std::fs::read(install.join("sub").join("b2")).unwrap(),
+            b"new b2"
+        );
+        assert!(!install.join("removed").exists());
+        assert!(
+            !install.join(COMMITTING_MARKER).exists(),
+            "marker never copied into the game"
+        );
+        assert!(!staging.exists() && !commit_interrupted(&install));
+
+        // Crash after the moves, before the install was recorded: staging is gone; the rerun
+        // still succeeds and just applies deletions.
+        std::fs::write(install.join("removed2"), b"x").unwrap();
+        commit_staged(&staging, &install, &["removed2".to_owned()])
+            .await
+            .unwrap();
+        assert!(!install.join("removed2").exists() && !staging.exists());
     }
 
     #[test]

@@ -79,6 +79,8 @@ export const commands = {
 	setHidden: (appName: string, hidden: boolean) => typedError<null, UiError>(__TAURI_INVOKE("set_hidden", { appName, hidden })),
 	/**  Let the user pick a folder (Windows' own folder dialog). `None` if cancelled. */
 	pickFolder: (title: string) => typedError<string | null, UiError>(__TAURI_INVOKE("pick_folder", { title })),
+	/**  Open the third-party notices that ship with the app (Settings → About). */
+	openNotices: () => typedError<null, UiError>(__TAURI_INVOKE("open_notices")),
 	cloudSaveStatus: (appName: string) => typedError<SaveStatus_Serialize, UiError>(__TAURI_INVOKE("cloud_save_status", { appName })),
 	/**  Installed games whose catalog entry supports cloud saves (no network). */
 	cloudSaveGames: () => typedError<SaveStatus_Serialize[], UiError>(__TAURI_INVOKE("cloud_save_games")),

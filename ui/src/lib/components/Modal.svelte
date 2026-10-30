@@ -12,10 +12,35 @@
 
   let box = $state<HTMLDivElement>();
   const id = `dlg-${Math.random().toString(36).slice(2, 8)}`;
-  $effect(() => box?.focus());
+  // Focus moves into the dialog and returns to where it was when the dialog closes.
+  $effect(() => {
+    const before = document.activeElement as HTMLElement | null;
+    box?.focus();
+    return () => before?.focus?.();
+  });
+
+  /** Escape closes; Tab stays inside the dialog (aria-modal). */
+  function onkey(e: KeyboardEvent) {
+    if (e.key === 'Escape' && !busy) onclose();
+    if (e.key !== 'Tab' || !box) return;
+    const items = [...box.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(
+      (el) => !el.hasAttribute('disabled') && el.offsetParent !== null,
+    );
+    if (items.length === 0) return;
+    const first = items[0]!;
+    const last = items[items.length - 1]!;
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || active === box)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
 </script>
 
-<svelte:window onkeydown={(e) => e.key === 'Escape' && !busy && onclose()} />
+<svelte:window onkeydown={onkey} />
 
 <div class="backdrop" role="presentation" onclick={(e) => e.target === e.currentTarget && !busy && onclose()}>
   <div

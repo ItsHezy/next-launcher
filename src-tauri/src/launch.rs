@@ -46,6 +46,13 @@ impl LaunchState {
         self.running.lock().map(|r| !r.is_empty()).unwrap_or(false)
     }
 
+    pub fn running_names(&self) -> Vec<String> {
+        self.running
+            .lock()
+            .map(|r| r.keys().cloned().collect())
+            .unwrap_or_default()
+    }
+
     pub fn is_running(&self, app_name: &str) -> bool {
         self.running
             .lock()
@@ -202,6 +209,12 @@ pub(crate) async fn launch(
             .clone()
             .ok_or_else(|| err("notInstalled", "Install this game first."))?,
     );
+    if egs_download::commit_interrupted(&install_dir) {
+        return Err(err(
+            "busy",
+            format!("An update to {} was interrupted while it was being applied. It finishes when the download resumes; play after that.", game.title),
+        ));
+    }
     let manifest = install::installed_manifest(&state, &game).await?;
 
     // Prerequisites (e.g. a Visual C++ runtime) shipped in the game folder: ask once.

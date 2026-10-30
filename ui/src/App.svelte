@@ -28,6 +28,8 @@
     });
   }
 
+  const VIEW_LABELS: Record<string, string> = { store: 'Store', unreal: 'Unreal Engine', fab: 'Fab' };
+
   // Load a lazy route as soon as it is visited.
   $effect(() => {
     if (router.route !== 'library') load(router.route);
@@ -48,14 +50,14 @@
     <Sidebar />
     <div class="right">
       <TopBar />
-      <div class="views">
+      <main class="views">
         <section class="view" hidden={router.route !== 'library'} aria-label="Library">
           <Library />
         </section>
         {#each lazyMain as r (r)}
           {#if router.visited[r]}
             {@const View = views[r]}
-            <section class="view" hidden={router.route !== r}>
+            <section class="view" hidden={router.route !== r} aria-label={VIEW_LABELS[r]}>
               {#if View}
                 <View />
               {:else}
@@ -66,7 +68,7 @@
             </section>
           {/if}
         {/each}
-      </div>
+      </main>
     </div>
   </div>
 
@@ -96,6 +98,10 @@
   {:else if ui.dialog?.kind === 'account'}
     {#await import('./lib/components/AccountDialog.svelte') then { default: AccountDialog }}
       <AccountDialog what={ui.dialog.what} />
+    {/await}
+  {:else if ui.dialog?.kind === 'licenses'}
+    {#await import('./lib/components/LicensesDialog.svelte') then { default: LicensesDialog }}
+      <LicensesDialog />
     {/await}
   {:else if ui.dialog?.kind === 'saves'}
     {#await import('./lib/components/SaveConflictDialog.svelte') then { default: SaveConflictDialog }}
