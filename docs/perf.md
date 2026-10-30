@@ -17,6 +17,8 @@ will be somewhat higher.
 | Installer (NSIS, incl. 830 KB of license texts) | ≤ 15 MB | **3.45 MiB** ✅ (exe 9.01 MiB) |
 | Initial / total JS (gz) | 80 / 250 KB | 38.5 / 70.3 KB ✅ (licenses list lazy) |
 | Notification plugin cost | ≤ 500 KB per dependency | +207 KB exe, +62 KB installer |
+| Updater plugin cost | ≤ 500 KB per dependency | +287 KB exe, +115 KB installer |
+| Installer / exe with the updater (final Phase 9 build) | ≤ 15 MB | **3.57 MiB** ✅ / 9.33 MiB |
 | Accessibility (axe-core, 17 views, + 44 px hit targets) | 0 serious | **0 violations** ✅ |
 | Warm / cold start, median of 9 | ≤ 400 ms / ≤ 1.0 s | 587 / 651 ms **not comparable**: a game (≈ 4 cores busy) was running. The Phase 8 exe measured at the same time: 608 ms warm. To re-measure on an idle machine. |
 

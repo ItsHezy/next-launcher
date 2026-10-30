@@ -9,7 +9,7 @@
   import { ACCENTS, settings } from '../../lib/state/settings.svelte';
   import { router } from '../../lib/state/router.svelte';
   import { comingSoon, ui } from '../../lib/state/ui.svelte';
-  import { appVersion } from './about.svelte';
+  import { appUpdate, appVersion } from './about.svelte';
   import type { Action, Row } from './schema';
 
   let { row }: { row: Row } = $props();
@@ -29,6 +29,9 @@
       coupons: w?.coupons == null ? unavailable : `${num(w.coupons)} available`,
       hidden: account.hiddenCount === 0 ? 'None' : String(account.hiddenCount),
       version: appVersion.value,
+      updateStatus: appUpdate.version
+        ? `Version ${appUpdate.version} is available`
+        : 'Updates are signed, and install only when you choose',
     };
     for (const c of CONNECTIONS) {
       const link = d?.connections?.find((x) => x.kind === c.kind);
@@ -48,6 +51,17 @@
   }
 
   let busy = $state(false);
+
+  async function checkAppUpdate() {
+    busy = true;
+    const res = await commands.checkAppUpdate();
+    busy = false;
+    if (res.status === 'error') return ui.toast(res.error.message);
+    const u = res.data;
+    if (!u.configured) ui.toast("Updates aren't set up for this build yet.");
+    else if (u.available && u.version) ui.dialog = { kind: 'appUpdate', version: u.version, notes: u.notes };
+    else ui.toast(`You have the latest version (${u.current}).`);
+  }
 
   function run(a: Action) {
     if (a.type === 'import') ui.dialog = 'import';
@@ -71,6 +85,7 @@
         void commands.openLogsFolder().then((r) => r.status === 'error' && ui.toast(r.error.message));
       else if (a.cmd === 'openLicense')
         void commands.openBundled('license').then((r) => r.status === 'error' && ui.toast(r.error.message));
+      else if (a.cmd === 'checkAppUpdate') void checkAppUpdate();
     } else comingSoon(a.what, a.phase);
   }
 
@@ -86,7 +101,7 @@
 {#snippet text()}
   <span class="text">
     <span class="label" id="{id}-l">{row.label}</span>
-    {#if row.desc}<span class="desc" id="{id}-d">{row.desc}</span>{/if}
+    {#if row.desc}<span class="desc" id="{id}-d">{fill(row.desc)}</span>{/if}
     {#if row.kind === 'toggle' && row.disabled}<span class="desc">{row.disabled}</span>{/if}
   </span>
 {/snippet}

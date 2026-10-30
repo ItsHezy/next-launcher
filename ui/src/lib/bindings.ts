@@ -80,6 +80,9 @@ export const commands = {
 	/**  Let the user pick a folder (Windows' own folder dialog). `None` if cancelled. */
 	pickFolder: (title: string) => typedError<string | null, UiError>(__TAURI_INVOKE("pick_folder", { title })),
 	openBundled: (doc: BundledDoc) => typedError<null, UiError>(__TAURI_INVOKE("open_bundled", { doc })),
+	checkAppUpdate: () => typedError<AppUpdate_Serialize, UiError>(__TAURI_INVOKE("check_app_update")),
+	/**  Download the update, check its signature, run the installer (which restarts the app). */
+	installAppUpdate: () => typedError<null, UiError>(__TAURI_INVOKE("install_app_update")),
 	cloudSaveStatus: (appName: string) => typedError<SaveStatus_Serialize, UiError>(__TAURI_INVOKE("cloud_save_status", { appName })),
 	/**  Installed games whose catalog entry supports cloud saves (no network). */
 	cloudSaveGames: () => typedError<SaveStatus_Serialize[], UiError>(__TAURI_INVOKE("cloud_save_games")),
@@ -93,6 +96,7 @@ export const commands = {
 /** Events */
 export const events = {
 	accountChanged: makeEvent<AccountChanged, AccountChanged>("account-changed"),
+	appUpdateAvailable: makeEvent<AppUpdateAvailable, AppUpdateAvailable>("app-update-available"),
 	authChanged: makeEvent<AuthChanged_Serialize, AuthChanged_Deserialize>("auth-changed"),
 	downloadProgress: makeEvent<DownloadProgress, DownloadProgress>("download-progress"),
 	gameRunning: makeEvent<GameRunning, GameRunning>("game-running"),
@@ -171,6 +175,31 @@ export type AccountRow_Serialize = {
 export type AppInfo = {
 	version: string,
 	dataDir: string,
+};
+
+export type AppUpdate = AppUpdate_Serialize | AppUpdate_Deserialize;
+
+/**  A newer Next Launcher is available (background check). */
+export type AppUpdateAvailable = {
+	version: string,
+};
+
+export type AppUpdate_Deserialize = {
+	current: string,
+	/**  False until the owner sets an update key (ADR 0014). */
+	configured: boolean,
+	available: boolean,
+	version?: string | null,
+	notes?: string | null,
+};
+
+export type AppUpdate_Serialize = {
+	current: string,
+	/**  False until the owner sets an update key (ADR 0014). */
+	configured: boolean,
+	available: boolean,
+	version: string | null,
+	notes: string | null,
 };
 
 /**  Emitted whenever [`AuthStatus`] changes. */

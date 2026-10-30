@@ -103,6 +103,7 @@ pub fn setting_on(cache: &Cache, key: &str) -> bool {
     let default = matches!(
         key,
         "general.minimizeToTray"
+            | "general.checkAppUpdates"
             | "general.showUninstalled"
             | "downloads.pauseWhilePlaying"
             | "downloads.autoUpdate"
@@ -135,6 +136,7 @@ pub fn app_ready(app: AppHandle, state: State<'_, AppState>, report: FrontendMar
     if !state.no_network {
         crate::auth::start_restore(&app);
         crate::library::kick_images(&app);
+        crate::updater::schedule(&app);
     }
     let marks = startup::snapshot();
     tracing::info!("{}", startup::render(&marks));

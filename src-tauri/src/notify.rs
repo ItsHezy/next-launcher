@@ -10,6 +10,7 @@ use crate::commands::{setting_on, AppState};
 pub enum Kind {
     DownloadFinished,
     FreeGames,
+    AppUpdate,
 }
 
 impl Kind {
@@ -17,6 +18,7 @@ impl Kind {
         match self {
             Self::DownloadFinished => "notifications.downloadFinished",
             Self::FreeGames => "notifications.freeGames",
+            Self::AppUpdate => "general.checkAppUpdates",
         }
     }
 }

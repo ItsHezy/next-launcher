@@ -7,6 +7,7 @@ export const DEFAULTS = {
   'general.runAtStartup': false,
   'general.startMinimized': false,
   'general.minimizeToTray': true,
+  'general.checkAppUpdates': true,
   'general.openOn': 'library',
   'general.showUninstalled': true,
   'general.defaultSort': 'title',

@@ -50,5 +50,16 @@
       "../LICENSE": "LICENSE.txt"
     },
     "license": "GPL-3.0-or-later"
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "PLACEHOLDER-UNTIL-THE-OWNER-GENERATES-THE-KEY",
+      "endpoints": [
+        "https://github.com/ItsHezy/next-launcher/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

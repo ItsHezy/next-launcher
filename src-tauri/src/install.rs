@@ -1688,6 +1688,7 @@ pub async fn dev_action(app: AppHandle, spec: String) {
             crate::saves::dev_action(&app, action, app_name).await
         }
         "account" => crate::account::dev_check(&app).await,
+        "app-update" => crate::updater::dev_action(&app, app_name).await,
         "page" => match serde_json::from_str::<crate::auth::EpicPage>(&format!("\"{app_name}\"")) {
             Ok(page) => {
                 let state = app.state::<AppState>();

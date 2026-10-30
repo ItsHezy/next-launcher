@@ -20,6 +20,7 @@ mod startup;
 mod store;
 mod support;
 mod tray;
+mod updater;
 
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
@@ -145,6 +146,8 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             support::set_hidden,
             support::pick_folder,
             support::open_bundled,
+            updater::check_app_update,
+            updater::install_app_update,
             saves::cloud_save_status,
             saves::cloud_save_games,
             saves::cloud_save_sync,
@@ -157,7 +160,8 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             install::MoveProgress,
             launch::GameRunning,
             account::AccountChanged,
-            saves::SaveSync
+            saves::SaveSync,
+            updater::AppUpdateAvailable
         ])
 }
 
@@ -308,6 +312,7 @@ fn main() {
             tray::show_window(app)
         }))
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(invoke)
         .register_asynchronous_uri_scheme_protocol(protocol::SCHEME, |ctx, request, responder| {
             let Some(state) = ctx.app_handle().try_state::<AppState>() else {

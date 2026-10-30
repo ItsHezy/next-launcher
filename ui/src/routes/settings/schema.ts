@@ -28,7 +28,7 @@ export type Action =
   | { type: 'import' }
   /** An in-app dialog; `fallback` opens instead when Epic doesn't let us do it in-app. */
   | { type: 'dialog'; dialog: 'displayName' | 'language' | 'redeem' | 'hidden' | 'licenses'; fallback?: EpicPage }
-  | { type: 'cmd'; cmd: 'checkConnection' | 'checkFolder' | 'checkDisk' | 'openLogs' | 'openLicense' };
+  | { type: 'cmd'; cmd: 'checkConnection' | 'checkFolder' | 'checkDisk' | 'openLogs' | 'openLicense' | 'checkAppUpdate' };
 
 export interface Group {
   title?: string;
@@ -148,6 +148,12 @@ export const SECTIONS: Section[][] = [
               label: 'Minimize to tray on close',
               desc: 'Closing the window keeps Next Launcher in the tray; quit from the tray menu',
               key: 'general.minimizeToTray',
+            },
+            {
+              kind: 'toggle',
+              label: 'Check for app updates',
+              desc: 'Once a day; you choose when to install',
+              key: 'general.checkAppUpdates',
             },
             {
               kind: 'select',
@@ -382,7 +388,7 @@ export const SECTIONS: Section[][] = [
               value: 'GNU GPL v3 or later',
               action: cmd('openLicense'),
             },
-            { kind: 'button', label: 'Check for updates', button: 'Check', action: soon('App updates', 9) },
+            { kind: 'button', label: 'Check for updates', desc: '{updateStatus}', button: 'Check', action: cmd('checkAppUpdate') },
             { kind: 'value', label: 'Open-source licenses', value: '', action: { type: 'dialog', dialog: 'licenses' } },
           ],
         },

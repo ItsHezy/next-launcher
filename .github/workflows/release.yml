@@ -1,0 +1,107 @@
+name: Release
+
+# Push a tag that matches the app version (src-tauri/tauri.conf.json), e.g. `v0.2.0`, to build
+# the installer and its update manifest into a *draft* GitHub release. Nothing reaches users
+# until the owner publishes the draft: the app only reads `releases/latest` (ADR 0014).
+#
+# Secrets:
+#   TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD  update signing key (required)
+#   WINDOWS_CERTIFICATE (base64 .pfx), WINDOWS_CERTIFICATE_PASSWORD  Authenticode (optional)
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: check
+    runs-on: windows-latest
+    env:
+      HAS_CERT: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Preflight (tag, update key, update address)
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] || { echo "::error::the TAURI_SIGNING_PRIVATE_KEY secret is not set"; exit 1; }
+          node -e "
+            const c = require('./src-tauri/tauri.conf.json');
+            const fail = (m) => { console.log('::error::' + m); process.exit(1); };
+            if ('v' + c.version !== process.env.GITHUB_REF_NAME) fail('tag ' + process.env.GITHUB_REF_NAME + ' does not match the app version ' + c.version);
+            const u = c.plugins.updater;
+            if (u.pubkey.startsWith('PLACEHOLDER')) fail('set plugins.updater.pubkey to the update public key');
+            const want = 'https://github.com/' + process.env.GITHUB_REPOSITORY + '/releases/latest/download/latest.json';
+            if (!u.endpoints.includes(want)) fail('plugins.updater.endpoints should contain ' + want);
+          "
+
+      - name: Load the code-signing certificate
+        if: env.HAS_CERT == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'cert.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $pw = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $pw
+          Remove-Item $pfx
+          $conf = Join-Path $env:RUNNER_TEMP 'sign.conf.json'
+          @{ bundle = @{ windows = @{ certificateThumbprint = $cert.Thumbprint; digestAlgorithm = 'sha256'; timestampUrl = 'http://timestamp.digicert.com' } } } |
+            ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8NoBOM $conf
+          "SIGN_CONF=$conf" >> $env:GITHUB_ENV
+
+      - name: Build the installer and its update signature
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run build -- --ci --config src-tauri/tauri.release.conf.json ${SIGN_CONF:+--config "$SIGN_CONF"}
+
+      - name: Collect release files
+        shell: bash
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          name="NextLauncher_${v}_x64-setup.exe"
+          src="target/release/bundle/nsis/Next Launcher_${v}_x64-setup.exe"
+          mkdir release
+          cp "$src" "release/$name"
+          cp "$src.sig" "release/$name.sig"
+          notes="docs/releases/$GITHUB_REF_NAME.md"
+          node tools/release-manifest.mjs --installer "release/$name" \
+            --url "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/$name" \
+            $([ -f "$notes" ] && echo --notes "$notes") --out release/latest.json
+          rm "release/$name.sig"
+          cp LICENSE release/LICENSE.txt
+          cp src-tauri/THIRD-PARTY-NOTICES.txt release/
+
+      # GitHub attaches the tag's source code to every release (GPL-3.0 section 6).
+      - name: Create the draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="docs/releases/$GITHUB_REF_NAME.md"
+          gh release create "$GITHUB_REF_NAME" release/* --draft --title "Next Launcher ${GITHUB_REF_NAME#v}" \
+            $([ -f "$notes" ] && echo --notes-file "$notes" || echo --generate-notes)

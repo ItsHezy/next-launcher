@@ -20,6 +20,12 @@ npm run check    # svelte-check + eslint
 cargo test --workspace
 ```
 
+## Releases
+
+Releases are built by GitHub Actions from a `v<version>` tag into a draft release, then
+published by hand; installed copies offer the update in Settings → About. Every update is signed
+with the project's update key, and the app refuses anything else. Details: ADR 0014.
+
 More: `PROGRESS.md` (what's built), `docs/protocol/` (how Epic's services work, as used here),
 `docs/decisions/` (design decisions), `docs/perf.md` (measurements).
 

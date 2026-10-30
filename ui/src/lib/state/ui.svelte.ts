@@ -11,6 +11,8 @@ export type Dialog =
   /** Account edits, code redemption, hidden games (Settings, profile menu). */
   | { kind: 'account'; what: 'displayName' | 'language' | 'redeem' | 'hidden' }
   | { kind: 'licenses' }
+  /** A signed Next Launcher update is ready to install. */
+  | { kind: 'appUpdate'; version: string; notes: string | null }
   /** Cloud saves changed in both places: which one to keep. */
   | { kind: 'saves'; appName: string; title: string; localTime: string; cloudTime: string; launch: boolean }
   /** A launch needs an answer first (prerequisites, offline start). */

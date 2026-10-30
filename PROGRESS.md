@@ -11,7 +11,7 @@
 - [x] **Phase 6: Store** (2026-10-29). Live store: Featured, free games, on sale, new releases, search, product pages; wishlist, cart and checkout on Epic's own pages, signed in.
 - [x] **Phase 7: Settings, wallet, profile menu** (2026-10-29). Real account, connections and wallet data; in-app edits where Epic permits; every other row opens Epic's verified page, signed in.
 - [x] **Phase 8: Cloud saves** (2026-10-29). Download, upload, conflict handling and launch/exit sync verified with one game; local saves always backed up before a download.
-- [~] **Phase 9: Polish and ship** (2026-10-30). Tray, autostart, notifications, crash-safe updates, accessibility, notices done. Signing, updater and license wait for the owner.
+- [~] **Phase 9: Polish and ship** (2026-10-30). Tray, autostart, notifications, crash-safe updates, accessibility, notices, license, app updater and release pipeline done. Publishing waits for the owner (repository, update key, optional certificate).
 
 ## Phase 9 summary (what doesn't need the owner)
 
@@ -28,16 +28,32 @@ What works (verified live unless noted):
 - **Accessibility**: 0 axe-core violations on 17 views, every clickable element ≥ 44 px, dialogs keep
   keyboard focus inside and give it back; `main` landmark and store card names fixed.
 - **Open-source notices**: 326 components listed in Settings → About; full texts ship with the installer.
+- **License**: GPL-3.0-or-later (ADR 0001), shipped with the installer and shown in About.
+- **App updates** (ADR 0014): daily background check (setting, default on) and About → Check;
+  "Install and restart" only on the user's click, never while a game runs. Every update must be
+  signed with the owner's key. Tested against a local fake release with a throwaway key: a signed
+  update downloads and verifies; one changed byte or another key is refused; same version reports
+  up to date; without a key the app reports "not set up" and contacts nothing. Not tested: the
+  install-and-restart step (it would run a real installer on this PC).
+- **Release pipeline**: tag `v<version>` → CI checks → preflight → signed build → `latest.json` →
+  draft GitHub release (published by hand). Dry-run locally with the throwaway key; not yet run on
+  GitHub (no repository yet).
 - 118 Rust tests.
 
 Measured: idle 103.0 MB / 0.04 % CPU, installer 3.45 MiB, tray reopen 31 ms. Startup times this round
 are not comparable (a game was running; see `docs/perf.md`).
 
 Needs the owner:
-1. **Code-signing certificate** for the installer (unsigned installers trigger SmartScreen).
-2. **App updater**: where updates are hosted (e.g. GitHub Releases) and an update signing key pair.
-3. ~~License~~: GPL-3.0-or-later, applied (`LICENSE`, crate and package metadata, shipped with the
-   installer, shown in Settings → About).
+1. **GitHub repository** (assumed `ItsHezy/next-launcher`; the update address in
+   `tauri.conf.json` points there) and permission to push.
+2. **Update signing key**: generate it yourself (`npm run tauri signer generate -- -w <path outside
+   the repo>`), put the public key in `tauri.conf.json` → `plugins.updater.pubkey`, and the private
+   key and its password in the repository secrets `TAURI_SIGNING_PRIVATE_KEY` /
+   `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Keep a backup: without it, installed copies can't verify
+   later updates.
+3. **Code-signing certificate** (optional; secrets `WINDOWS_CERTIFICATE` /
+   `WINDOWS_CERTIFICATE_PASSWORD`). Unsigned installers trigger SmartScreen.
+4. ~~License~~: GPL-3.0-or-later, applied. ~~Update hosting~~: GitHub Releases.
 
 ## Phase 8 summary
 
@@ -271,7 +287,7 @@ Known gaps:
 3. **Warm start**: ~390–450 ms on an idle machine (WebView2 window creation alone is ~300–350 ms).
    Phase 9 adds close-to-tray (default on) with a ~31 ms reopen. Recommendation: accept.
 4. **Mockup access**: sign in to claude.ai in the app's browser pane, or share screenshots.
-5. **Signing certificate and update hosting** (Phase 9, see above).
+5. **Repository, update key, signing certificate** (Phase 9, see above).
 
 ## Conventions
 
