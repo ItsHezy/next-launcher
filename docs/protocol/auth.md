@@ -169,7 +169,8 @@ Route A (preferred, one navigation):
 **Verified live:** with the web profile's cookies deleted and only our stored refresh token left,
 Route A opened `accounts.epicgames.com/account/password` already signed in. The SPA redeems the
 code, sets the `www.epicgames.com` session, and `accounts.epicgames.com` completes its own
-`/auth/login` SSO hop silently. This is what the app uses (`auth::open_epic_page`).
+`/auth/login` SSO hop silently. This is what the app uses (`auth::signed_in_url`, for the
+Settings view in `webpane.rs` and the store's web window).
 
 Route B (fallback, not needed so far; scripted inside the web window, same origin):
 

@@ -45,7 +45,7 @@ opens `accounts.epicgames.com/account/code-redemption`.
 
 The code is typed by the user in our dialog and sent once on their click. Never logged.
 
-## Web-only wallet features (signed-in web window)
+## Web-only wallet features (Epic's page inside Settings, ADR 0016)
 
 | Feature | URL | Conf. |
 |---|---|---|

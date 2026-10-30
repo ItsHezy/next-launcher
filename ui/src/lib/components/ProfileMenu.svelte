@@ -17,7 +17,7 @@
   function redeem() {
     ui.close();
     if (account.caps?.redeem) ui.dialog = { kind: 'account', what: 'redeem' };
-    else void auth.openEpicPage('redeem');
+    else auth.openEpicPage('redeem');
   }
 
   interface Item {

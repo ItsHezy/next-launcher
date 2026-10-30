@@ -1,6 +1,8 @@
 // Tiny in-memory router. Routes stay mounted once visited (tab switches only
 // toggle visibility), and lazy routes are prefetched when the app is idle.
 
+import type { EpicPage } from '../bindings';
+
 export type Route = 'library' | 'store' | 'unreal' | 'fab' | 'settings';
 export type SettingsSection =
   | 'account'
@@ -27,6 +29,8 @@ class RouterState {
   section = $state<SettingsSection>('general');
   /** The route to return to from Settings. */
   back = $state<Route>('library');
+  /** Epic's own page shown inside the Settings section (ADR 0016); any navigation leaves it. */
+  epicPage = $state<{ page: EpicPage; title: string } | null>(null);
   visited = $state<Record<Route, boolean>>({
     library: true,
     store: false,
@@ -37,6 +41,7 @@ class RouterState {
   timings = $state.raw<NavTiming[]>([]);
 
   go(route: Route, section?: SettingsSection) {
+    this.epicPage = null;
     if (section) this.section = section;
     if (route === this.route) return;
     const firstVisit = !this.visited[route];

@@ -83,7 +83,7 @@
       <p class="msg">Epic doesn't allow another display name change yet.</p>
       <div class="actions">
         <button class="btn btn-quiet" onclick={() => (ui.dialog = null)}>Close</button>
-        <button class="btn btn-primary" onclick={() => (ui.dialog = null, void auth.openEpicPage('accountPersonal'))}>
+        <button class="btn btn-primary" onclick={() => (ui.dialog = null, auth.openEpicPage('accountPersonal'))}>
           Open Epic's page
         </button>
       </div>

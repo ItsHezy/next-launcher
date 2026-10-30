@@ -22,13 +22,13 @@ export type Row =
 /** What a row does when used. Phase numbers say where the real behaviour lands. */
 export type Action =
   | { type: 'soon'; what: string; phase: number }
-  /** Epic's own page in the signed-in web window. */
+  /** Epic's own page, signed in, shown inside Settings (ADR 0016). */
   | { type: 'web'; page: EpicPage }
   | { type: 'goto'; section: SettingsSection }
   | { type: 'import' }
   /** An in-app dialog; `fallback` opens instead when Epic doesn't let us do it in-app. */
-  | { type: 'dialog'; dialog: 'displayName' | 'language' | 'redeem' | 'hidden' | 'licenses'; fallback?: EpicPage }
-  | { type: 'cmd'; cmd: 'checkConnection' | 'checkFolder' | 'checkDisk' | 'openLogs' | 'openLicense' | 'checkAppUpdate' };
+  | { type: 'dialog'; dialog: 'displayName' | 'language' | 'redeem' | 'hidden' | 'licenses' | 'license'; fallback?: EpicPage }
+  | { type: 'cmd'; cmd: 'checkConnection' | 'checkFolder' | 'checkDisk' | 'openLogs' | 'checkAppUpdate' };
 
 export interface Group {
   title?: string;
@@ -392,7 +392,7 @@ export const SECTIONS: Section[][] = [
               label: 'License',
               desc: 'Free software: you may share and change it under the GPL',
               value: 'GNU GPL v3 or later',
-              action: cmd('openLicense'),
+              action: { type: 'dialog', dialog: 'license' },
             },
             { kind: 'button', label: 'Check for updates', desc: '{updateStatus}', button: 'Check', action: cmd('checkAppUpdate') },
             { kind: 'value', label: 'Open-source licenses', value: '', action: { type: 'dialog', dialog: 'licenses' } },

@@ -1693,12 +1693,9 @@ pub async fn dev_action(app: AppHandle, spec: String) {
         "account" => crate::account::dev_check(&app).await,
         "app-update" => crate::updater::dev_action(&app, app_name).await,
         "page" => match serde_json::from_str::<crate::auth::EpicPage>(&format!("\"{app_name}\"")) {
-            Ok(page) => {
-                let state = app.state::<AppState>();
-                crate::auth::open_epic_page(app.clone(), state, page)
-                    .await
-                    .map(|_| "opened".to_owned())
-            }
+            Ok(page) => crate::auth::open_epic_page(&app, page)
+                .await
+                .map(|_| "opened".to_owned()),
             Err(_) => Err(err("dev", "unknown page")),
         },
         "open" => crate::store::dev_open(&app, app_name).await,

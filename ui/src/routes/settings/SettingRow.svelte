@@ -66,25 +66,27 @@
   function run(a: Action) {
     if (a.type === 'import') ui.dialog = 'import';
     else if (a.type === 'goto') router.go('settings', a.section);
-    else if (a.type === 'web') void auth.openEpicPage(a.page);
+    else if (a.type === 'web') auth.openEpicPage(a.page);
     else if (a.type === 'dialog') {
       if (a.dialog === 'licenses') {
         ui.dialog = { kind: 'licenses' };
+        return;
+      }
+      if (a.dialog === 'license') {
+        ui.dialog = { kind: 'doc', doc: 'license', title: 'GNU General Public License v3' };
         return;
       }
       const inApp =
         a.dialog === 'hidden' ||
         (a.dialog === 'redeem' ? account.caps?.redeem : account.caps?.updateAccount) === true;
       if (inApp) ui.dialog = { kind: 'account', what: a.dialog };
-      else if (a.fallback) void auth.openEpicPage(a.fallback);
+      else if (a.fallback) auth.openEpicPage(a.fallback);
     } else if (a.type === 'cmd') {
       if (a.cmd === 'checkConnection') void check(commands.checkConnection);
       else if (a.cmd === 'checkFolder') void check(commands.checkInstallFolder);
       else if (a.cmd === 'checkDisk') void check(commands.checkDisk);
       else if (a.cmd === 'openLogs')
         void commands.openLogsFolder().then((r) => r.status === 'error' && ui.toast(r.error.message));
-      else if (a.cmd === 'openLicense')
-        void commands.openBundled('license').then((r) => r.status === 'error' && ui.toast(r.error.message));
       else if (a.cmd === 'checkAppUpdate') void checkAppUpdate();
     } else comingSoon(a.what, a.phase);
   }
@@ -115,7 +117,7 @@
   <button class="row clickable" onclick={() => run(row.action)}>
     {@render text()}
     {#if row.kind === 'value'}<span class="value">{fill(row.value)}</span>{/if}
-    <span class="trail"><Icon name={row.kind === 'web' ? 'external' : 'chevronRight'} size={18} /></span>
+    <span class="trail"><Icon name="chevronRight" size={18} /></span>
   </button>
 {:else}
   <div class="row">

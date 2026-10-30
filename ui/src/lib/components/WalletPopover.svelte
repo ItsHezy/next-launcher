@@ -19,7 +19,7 @@
 
   function web(page: EpicPage) {
     ui.close();
-    void auth.openEpicPage(page);
+    auth.openEpicPage(page);
   }
 </script>
 
@@ -47,10 +47,10 @@
   </div>
   <div class="sep"></div>
   <button class="link" onclick={() => web('transactions')}>
-    Transaction history <Icon name="external" size={16} />
+    Transaction history <Icon name="chevronRight" size={16} />
   </button>
   <button class="link" onclick={() => web('paymentMethods')}>
-    Payment methods <Icon name="external" size={16} />
+    Payment methods <Icon name="chevronRight" size={16} />
   </button>
   <button
     class="link"

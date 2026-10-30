@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { commands } from '../bindings';
   import { ui } from '../state/ui.svelte';
   import Modal from './Modal.svelte';
 
@@ -23,10 +22,7 @@
     return q ? entries.filter((e) => e.name.toLowerCase().includes(q) || e.license.toLowerCase().includes(q)) : entries;
   });
 
-  async function openNotices() {
-    const res = await commands.openBundled('thirdPartyNotices');
-    if (res.status === 'error') ui.toast(res.error.message);
-  }
+  const showNotices = () => (ui.dialog = { kind: 'doc', doc: 'thirdPartyNotices', title: 'Third-party notices' });
 </script>
 
 <Modal title="Open-source licenses" onclose={() => (ui.dialog = null)} width={620}>
@@ -44,7 +40,7 @@
     {/each}
   </ul>
   <div class="actions">
-    <button class="btn btn-quiet" onclick={openNotices}>Open full notices</button>
+    <button class="btn btn-quiet" onclick={showNotices}>Show full notices</button>
     <button class="btn btn-primary" onclick={() => (ui.dialog = null)}>Done</button>
   </div>
 </Modal>

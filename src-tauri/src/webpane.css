@@ -1,0 +1,342 @@
+/* Epic's pages inside Settings, dressed as the app (ADR 0016). Values mirror
+ * ui/src/styles/app.css. Only Epic's own site chrome is hidden: sign-in, captcha and
+ * cookie-consent overlays are never touched. Epic's pages use Material UI, whose class names
+ * are stable; everything here is cosmetic, so a redesign on Epic's side only loses the look. */
+
+:root {
+  --nl-accent: __ACCENT__;
+  --nl-accent-fill: color-mix(in srgb, var(--nl-accent), #000 12%);
+  --nl-accent-fill-hover: color-mix(in srgb, var(--nl-accent), #000 4%);
+  --nl-accent-text: color-mix(in srgb, var(--nl-accent), #fff 45%);
+  --nl-surface: #2e3033;
+  --nl-inset: #26282a;
+  --nl-raised: #37393d;
+  --nl-control: rgba(0, 0, 0, 0.22);
+  --nl-hover: rgba(255, 255, 255, 0.06);
+  --nl-selected: rgba(255, 255, 255, 0.12);
+  --nl-border: rgba(255, 255, 255, 0.07);
+  --nl-text: #f2f2f5;
+  --nl-text-2: #a7a7b2;
+  --nl-text-3: #8e8e99;
+  --nl-danger: #ff8a80;
+  --nl-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--nl-surface) !important;
+}
+body {
+  color: var(--nl-text) !important;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+input,
+textarea,
+[contenteditable],
+td,
+code,
+pre {
+  user-select: text;
+  -webkit-user-select: text;
+}
+img,
+a {
+  -webkit-user-drag: none;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ---- Epic's site chrome: the launcher's own bar and Settings menu replace it ---- */
+
+epicgames-navigation,
+epicgames-footer,
+fortnite-navigation,
+fortnite-footer,
+egs-navigation,
+egs-footer,
+unrealengine-navigation,
+unrealengine-footer {
+  display: none !important;
+}
+/* Account pages: Epic's section menu, then the page. */
+#account-management > .MuiGrid-container > .MuiGrid-item:first-child {
+  display: none !important;
+}
+#account-management {
+  max-width: 808px !important;
+  margin: 0 !important;
+  padding: 8px 20px 40px !important;
+}
+#account-management > .MuiGrid-container {
+  margin: 0 !important;
+  width: 100% !important;
+}
+#account-management > .MuiGrid-container > .MuiGrid-item {
+  padding: 0 !important;
+  max-width: 100% !important;
+  flex-basis: 100% !important;
+}
+#account-management > .MuiGrid-container > .MuiGrid-item > .MuiBox-root {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+/* The page's own title and tagline: the launcher's bar already names the page. */
+#account-management .MuiTypography-h2,
+#account-management .MuiTypography-h2 + .MuiTypography-root,
+#account-management :has(> .MuiTypography-h2):not(:has(> :not(.MuiTypography-h2, .MuiTypography-h2 + *))) {
+  display: none !important;
+}
+#account-management :has(> .MuiTypography-h2) + * {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* ---- Type ---- */
+
+.MuiTypography-root {
+  font-family: 'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif !important;
+  letter-spacing: 0 !important;
+}
+
+.MuiTypography-h1,
+.MuiTypography-h2 {
+  font-size: 22px !important;
+  line-height: 1.3 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+}
+.MuiTypography-h3 {
+  font-size: 19px !important;
+  line-height: 1.3 !important;
+  font-weight: 700 !important;
+}
+.MuiTypography-h4 {
+  font-size: 17px !important;
+  line-height: 1.35 !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+.MuiTypography-h5,
+.MuiTypography-h6 {
+  font-size: 15px !important;
+  line-height: 1.4 !important;
+  font-weight: 600 !important;
+}
+#root a:not(.MuiButtonBase-root),
+#cosmos-app a,
+.MuiLink-root {
+  color: var(--nl-accent-text) !important;
+}
+
+/* ---- Cards (the app's grouped settings) ---- */
+
+#root .MuiPaper-elevation0:not(.MuiAlert-root):not(.MuiDialog-paper) {
+  background: var(--nl-inset) !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  box-shadow: none !important;
+  padding: 20px 24px !important;
+}
+#root .MuiPaper-elevation0 .MuiPaper-elevation0:not(.MuiAlert-root) {
+  background: var(--nl-control) !important;
+  border-radius: 12px !important;
+}
+.MuiDivider-root {
+  border-color: var(--nl-border) !important;
+}
+#root .MuiPaper-root + .MuiDivider-root {
+  border-color: transparent !important;
+  margin: 6px 0 !important;
+}
+.MuiAlert-root {
+  border-radius: 12px !important;
+}
+.MuiTableCell-root {
+  border-color: var(--nl-border) !important;
+}
+.MuiTableCell-head {
+  color: var(--nl-text-2) !important;
+}
+
+/* ---- Buttons (.btn, .btn-primary, .btn-quiet, .btn-danger, .icon-btn) ---- */
+
+.MuiButton-root {
+  border-radius: 999px !important;
+  min-height: 44px;
+  padding-left: 18px !important;
+  padding-right: 18px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  box-shadow: none !important;
+  transition:
+    background-color 150ms var(--nl-ease),
+    transform 150ms cubic-bezier(0.2, 0.9, 0.25, 1.08) !important;
+}
+.MuiButton-root:active:not(.Mui-disabled) {
+  transform: scale(0.97);
+}
+.MuiButton-containedPrimary {
+  background: var(--nl-accent-fill) !important;
+  color: #fff !important;
+}
+.MuiButton-containedPrimary:hover {
+  background: var(--nl-accent-fill-hover) !important;
+}
+.MuiButton-containedSecondary,
+.MuiButton-containedInherit {
+  background: var(--nl-control) !important;
+  color: var(--nl-text) !important;
+}
+.MuiButton-containedSecondary:hover,
+.MuiButton-containedInherit:hover {
+  background: var(--nl-selected) !important;
+}
+.MuiButton-containedError {
+  background: var(--nl-control) !important;
+  color: var(--nl-danger) !important;
+}
+.MuiButton-containedError:hover {
+  background: rgba(255, 138, 128, 0.12) !important;
+}
+.MuiButton-outlined {
+  border-color: var(--nl-border) !important;
+  color: var(--nl-text) !important;
+}
+.MuiButton-text,
+.MuiButton-outlinedPrimary {
+  color: var(--nl-accent-text) !important;
+}
+.MuiButton-root.Mui-disabled {
+  background: var(--nl-control) !important;
+  color: var(--nl-text-3) !important;
+}
+.MuiIconButton-root {
+  border-radius: 12px !important;
+  color: var(--nl-text-2) !important;
+}
+.MuiIconButton-root:hover {
+  background: var(--nl-hover) !important;
+  color: var(--nl-text) !important;
+}
+.MuiButtonBase-root.Mui-focusVisible {
+  outline: 2px solid var(--nl-accent-text) !important;
+  outline-offset: 2px;
+}
+
+/* ---- Fields ---- */
+
+.MuiOutlinedInput-root {
+  background: var(--nl-control) !important;
+  border-radius: 12px !important;
+}
+.MuiOutlinedInput-notchedOutline {
+  border: 1px solid var(--nl-border) !important;
+  border-radius: 12px !important;
+}
+.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: var(--nl-accent-text) !important;
+}
+.MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline {
+  border-color: var(--nl-danger) !important;
+}
+.MuiInputLabel-root,
+.MuiFormHelperText-root {
+  color: var(--nl-text-2) !important;
+}
+.MuiInputLabel-root.Mui-focused {
+  color: var(--nl-accent-text) !important;
+}
+.MuiInputLabel-root.Mui-error,
+.MuiFormHelperText-root.Mui-error {
+  color: var(--nl-danger) !important;
+}
+
+/* ---- Switches, checkboxes, tabs ---- */
+
+.MuiSwitch-track {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  opacity: 1 !important;
+  border-radius: 999px !important;
+}
+.MuiSwitch-switchBase.Mui-checked {
+  color: #fff !important;
+}
+.MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track {
+  background-color: var(--nl-accent-fill) !important;
+}
+.MuiCheckbox-root.Mui-checked,
+.MuiCheckbox-indeterminate,
+.MuiRadio-root.Mui-checked {
+  color: var(--nl-accent-text) !important;
+}
+.MuiTab-root {
+  text-transform: none !important;
+  color: var(--nl-text-2) !important;
+  background: transparent !important;
+}
+.MuiTab-root.Mui-selected {
+  color: var(--nl-text) !important;
+}
+.MuiTabs-indicator {
+  background-color: var(--nl-accent) !important;
+  height: 3px !important;
+  border-radius: 3px !important;
+}
+
+/* ---- Menus and dialogs (the app's popovers and Modal) ---- */
+
+.MuiPopover-paper,
+.MuiMenu-paper,
+.MuiAutocomplete-paper {
+  background: var(--nl-raised) !important;
+  border: 1px solid var(--nl-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4) !important;
+}
+.MuiMenuItem-root:hover,
+.MuiAutocomplete-option.Mui-focused {
+  background: var(--nl-hover) !important;
+}
+.MuiMenuItem-root.Mui-selected,
+.MuiAutocomplete-option[aria-selected='true'] {
+  background: var(--nl-selected) !important;
+}
+.MuiDialog-paper {
+  background: var(--nl-surface) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5) !important;
+}
+.MuiBackdrop-root:not(.MuiBackdrop-invisible) {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+.MuiTooltip-tooltip {
+  background: var(--nl-raised) !important;
+  color: var(--nl-text) !important;
+  border-radius: 8px !important;
+  font-size: 12.5px !important;
+}

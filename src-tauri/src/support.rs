@@ -170,7 +170,8 @@ pub enum BundledDoc {
 
 #[tauri::command]
 #[specta::specta]
-pub fn open_bundled(app: AppHandle, doc: BundledDoc) -> Result<(), UiError> {
+/// The text of a bundled document, shown in an in-app dialog.
+pub fn read_bundled(app: AppHandle, doc: BundledDoc) -> Result<String, UiError> {
     let name = match doc {
         BundledDoc::License => "LICENSE.txt",
         BundledDoc::ThirdPartyNotices => "THIRD-PARTY-NOTICES.txt",
@@ -187,8 +188,7 @@ pub fn open_bundled(app: AppHandle, doc: BundledDoc) -> Result<(), UiError> {
                 format!("{name} isn't installed with this copy of Next Launcher."),
             )
         })?;
-    egs_launch::process::open_with_shell(&path.to_string_lossy())
-        .map_err(|e| err("open", e.to_string()))
+    std::fs::read_to_string(&path).map_err(|e| err("read", e.to_string()))
 }
 
 #[tauri::command]

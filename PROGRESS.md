@@ -20,6 +20,13 @@
   live with Fortnite on `F:\Fortnite` (no file there or in EGL's data changed); a second sync adds
   nothing; uninstalled-here installs aren't re-added (unit-tested). Setting in Downloads & installs.
 - Development builds run next to an installed Next Launcher instead of handing over to it.
+- **Every setting in the app** (ADR 0016): rows that need Epic's own page (country, email,
+  password, connections, wallet, transactions, help, legal…) show it inside Settings instead of a
+  second window, dressed as the app: no Epic header or footer, the app's cards, buttons, fields,
+  accent and scrollbars, a native spinner while loading, no browser menus or shortcuts. Account
+  pages open in one step instead of six redirects. The license and third-party notices open in a
+  dialog instead of Notepad. Verified live with the owner's account (no setting changed): seven
+  pages checked, one window throughout, resize and menus handled, new-window links stay in place.
 
 ## Phase 9 summary (what doesn't need the owner)
 

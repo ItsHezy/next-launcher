@@ -7,6 +7,7 @@
   import AboutDiagnostics from './AboutDiagnostics.svelte';
   import AccountCard from './AccountCard.svelte';
   import CloudGames from './CloudGames.svelte';
+  import EpicPane from './EpicPane.svelte';
   import ManageGames from './ManageGames.svelte';
   import SettingRow from './SettingRow.svelte';
   import { ALL_SECTIONS, SECTIONS, type Row, type Section } from './schema';
@@ -44,8 +45,15 @@
     content?.scrollTo({ top: 0 });
   }
 
+  // Searching leaves Epic's page.
+  $effect(() => {
+    if (query) router.epicPage = null;
+  });
+
   function onkey(e: KeyboardEvent) {
-    if (e.key === 'Escape' && !query && router.route === 'settings') router.go('library');
+    if (e.key !== 'Escape' || query || router.route !== 'settings') return;
+    if (router.epicPage) router.epicPage = null;
+    else router.go('library');
   }
 </script>
 
@@ -85,43 +93,57 @@
 
   <main class="main panel">
     <div class="bar" data-tauri-drag-region>
-      <h2 class="h" data-tauri-drag-region>{query ? 'Search results' : current.label}</h2>
+      {#if router.epicPage}
+        <div class="crumbs" data-tauri-drag-region>
+          <button class="up" onclick={() => (router.epicPage = null)}>
+            <Icon name="chevronLeft" size={20} />
+            {current.label}
+          </button>
+          <h2 class="h" data-tauri-drag-region>{router.epicPage.title}</h2>
+        </div>
+      {:else}
+        <h2 class="h" data-tauri-drag-region>{query ? 'Search results' : current.label}</h2>
+      {/if}
       <WindowControls />
     </div>
 
-    <div class="content" bind:this={content}>
-      <div class="inner">
-        {#if query}
-          {#if results.length === 0}
-            <p class="empty">No settings match “{query}”.</p>
-          {/if}
-          {#each results as r (r.section.id)}
-            <button class="result-head" onclick={() => select(r.section.id)}>
-              <span class="tile sm" style:background={r.section.tile}><Icon name={r.section.icon} size={14} stroke={2} /></span>
-              {r.section.label}
-              <Icon name="chevronRight" size={16} />
-            </button>
-            {#if r.rows.length}
-              <div class="card">
-                {#each r.rows as row, i (i)}<SettingRow {row} />{/each}
-              </div>
+    {#if router.epicPage}
+      <EpicPane page={router.epicPage.page} />
+    {:else}
+      <div class="content" bind:this={content}>
+        <div class="inner">
+          {#if query}
+            {#if results.length === 0}
+              <p class="empty">No settings match “{query}”.</p>
             {/if}
-          {/each}
-        {:else}
-          {#if current.custom === 'account'}<AccountCard />{/if}
-          {#if current.custom === 'games'}<ManageGames />{/if}
-          {#each current.groups as g, gi (`${current.id}-${gi}`)}
-            {#if g.title}<h3 class="gt">{g.title}</h3>{/if}
-            <div class="card">
-              {#each g.rows as row, i (i)}<SettingRow {row} />{/each}
-            </div>
-            {#if g.footer}<p class="foot">{g.footer}</p>{/if}
-          {/each}
-          {#if current.custom === 'cloudGames'}<CloudGames />{/if}
-          {#if current.custom === 'about'}<AboutDiagnostics />{/if}
-        {/if}
+            {#each results as r (r.section.id)}
+              <button class="result-head" onclick={() => select(r.section.id)}>
+                <span class="tile sm" style:background={r.section.tile}><Icon name={r.section.icon} size={14} stroke={2} /></span>
+                {r.section.label}
+                <Icon name="chevronRight" size={16} />
+              </button>
+              {#if r.rows.length}
+                <div class="card">
+                  {#each r.rows as row, i (i)}<SettingRow {row} />{/each}
+                </div>
+              {/if}
+            {/each}
+          {:else}
+            {#if current.custom === 'account'}<AccountCard />{/if}
+            {#if current.custom === 'games'}<ManageGames />{/if}
+            {#each current.groups as g, gi (`${current.id}-${gi}`)}
+              {#if g.title}<h3 class="gt">{g.title}</h3>{/if}
+              <div class="card">
+                {#each g.rows as row, i (i)}<SettingRow {row} />{/each}
+              </div>
+              {#if g.footer}<p class="foot">{g.footer}</p>{/if}
+            {/each}
+            {#if current.custom === 'cloudGames'}<CloudGames />{/if}
+            {#if current.custom === 'about'}<AboutDiagnostics />{/if}
+          {/if}
+        </div>
       </div>
-    </div>
+    {/if}
   </main>
 </div>
 
@@ -237,6 +259,26 @@
   .h {
     font-size: 22px;
     font-weight: 700;
+  }
+  .crumbs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    margin-left: -18px;
+  }
+  .up {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 12px 0 6px;
+    border-radius: var(--radius-sm);
+    color: var(--accent-text);
+    font-weight: 500;
+    flex: none;
+  }
+  .up:hover {
+    background: var(--hover);
   }
   .content {
     flex: 1;

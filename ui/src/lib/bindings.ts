@@ -21,8 +21,6 @@ export const commands = {
 	/**  Open Epic's login page. Completion is reported through [`AuthChanged`]. */
 	signIn: () => typedError<null, UiError>(__TAURI_INVOKE("sign_in")),
 	signOut: () => typedError<null, UiError>(__TAURI_INVOKE("sign_out")),
-	/**  Open an Epic page already signed in: our token → exchange code → web session. */
-	openEpicPage: (page: EpicPage) => typedError<null, UiError>(__TAURI_INVOKE("open_epic_page", { page })),
 	/**  Open the page Epic asked for in a corrective action (e.g. accept a new policy). */
 	openCorrectiveAction: () => typedError<null, UiError>(__TAURI_INVOKE("open_corrective_action")),
 	refreshLibrary: () => typedError<null, UiError>(__TAURI_INVOKE("refresh_library")),
@@ -79,10 +77,22 @@ export const commands = {
 	setHidden: (appName: string, hidden: boolean) => typedError<null, UiError>(__TAURI_INVOKE("set_hidden", { appName, hidden })),
 	/**  Let the user pick a folder (Windows' own folder dialog). `None` if cancelled. */
 	pickFolder: (title: string) => typedError<string | null, UiError>(__TAURI_INVOKE("pick_folder", { title })),
-	openBundled: (doc: BundledDoc) => typedError<null, UiError>(__TAURI_INVOKE("open_bundled", { doc })),
+	/**  The text of a bundled document, shown in an in-app dialog. */
+	readBundled: (doc: BundledDoc) => typedError<string, UiError>(__TAURI_INVOKE("read_bundled", { doc })),
 	checkAppUpdate: () => typedError<AppUpdate_Serialize, UiError>(__TAURI_INVOKE("check_app_update")),
 	/**  Download the update, check its signature, run the installer (which restarts the app). */
 	installAppUpdate: () => typedError<null, UiError>(__TAURI_INVOKE("install_app_update")),
+	/**
+	 *  Show `page` in the pane (signed in when it needs it), creating the pane on first use.
+	 *  `accent` is the app's accent colour (`#rrggbb`), used by the page's styling.
+	 */
+	webPaneOpen: (page: EpicPage, bounds: PaneBounds, accent: string) => typedError<null, UiError>(__TAURI_INVOKE("web_pane_open", { page, bounds, accent })),
+	/**  Follow the Settings content area (window resized, layout changed). */
+	webPaneBounds: (bounds: PaneBounds) => __TAURI_INVOKE<void>("web_pane_bounds", { bounds }),
+	/**  Step aside while a menu or dialog is open (the native view draws above the UI). */
+	webPaneVisible: (visible: boolean) => __TAURI_INVOKE<void>("web_pane_visible", { visible }),
+	/**  The user left the page. */
+	webPaneClose: () => __TAURI_INVOKE<void>("web_pane_close"),
 	cloudSaveStatus: (appName: string) => typedError<SaveStatus_Serialize, UiError>(__TAURI_INVOKE("cloud_save_status", { appName })),
 	/**  Installed games whose catalog entry supports cloud saves (no network). */
 	cloudSaveGames: () => typedError<SaveStatus_Serialize[], UiError>(__TAURI_INVOKE("cloud_save_games")),
@@ -524,6 +534,14 @@ export type MoveResult = {
 	renamed: boolean,
 	/**  Some old files couldn't be deleted after the copy (in use); they are safe to remove. */
 	leftBehind: boolean,
+};
+
+/**  The Settings content area, in CSS pixels of the main window. */
+export type PaneBounds = {
+	x: number | null,
+	y: number | null,
+	width: number | null,
+	height: number | null,
 };
 
 export type RedeemResult = {

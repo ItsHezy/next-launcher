@@ -548,6 +548,7 @@ pub async fn sign_out(
             let _ = w.close();
         }
     }
+    let _ = crate::webpane::close_pane(&app);
     // Forget Epic's web cookies too (the next sign-in starts clean).
     let dir = state.paths.webview_web.clone();
     std::thread::spawn(move || {
@@ -589,7 +590,7 @@ pub enum EpicPage {
 }
 
 impl EpicPage {
-    fn url(self) -> &'static str {
+    pub(crate) fn url(self) -> &'static str {
         match self {
             Self::AccountPersonal => "https://accounts.epicgames.com/account/personal",
             Self::Password => "https://accounts.epicgames.com/account/password",
@@ -612,7 +613,7 @@ impl EpicPage {
     }
 
     /// Public pages open as they are; the rest go through the exchange-code bridge.
-    fn needs_sign_in(self) -> bool {
+    pub(crate) fn needs_sign_in(self) -> bool {
         !matches!(
             self,
             Self::Support
@@ -684,14 +685,13 @@ fn open_web_window(app: &AppHandle, url: &str, profile: std::path::PathBuf) -> R
     Ok(())
 }
 
-/// Open any Epic web page in the web window, signed in through an exchange code when
-/// we have a session (else as a guest; Epic's page offers its own sign-in).
-pub(crate) async fn open_signed_in(app: &AppHandle, url: &str) -> Result<(), UiError> {
-    let (Some(auth), Some(state)) = (app.try_state::<AuthState>(), app.try_state::<AppState>())
-    else {
-        return Err(UiError::internal("state"));
+/// The address that opens `url` signed in through an exchange code when we have a session
+/// (else `url` itself, as a guest; Epic's page offers its own sign-in).
+pub(crate) async fn signed_in_url(app: &AppHandle, url: &str) -> String {
+    let Some(auth) = app.try_state::<AuthState>() else {
+        return url.to_owned();
     };
-    let target = match auth.session.exchange_code().await {
+    match auth.session.exchange_code().await {
         Ok(code) => format!(
             "https://www.epicgames.com/id/exchange?exchangeCode={}&redirectUrl={}",
             code.expose(),
@@ -701,23 +701,29 @@ pub(crate) async fn open_signed_in(app: &AppHandle, url: &str) -> Result<(), UiE
             tracing::info!(error = %e, "opening Epic page without signing in");
             url.to_owned()
         }
+    }
+}
+
+/// Open any Epic web page in the web window (store pages), signed in when possible.
+pub(crate) async fn open_signed_in(app: &AppHandle, url: &str) -> Result<(), UiError> {
+    let Some(state) = app.try_state::<AppState>() else {
+        return Err(UiError::internal("state"));
     };
+    let target = signed_in_url(app, url).await;
     open_web_window(app, &target, state.paths.webview_web.clone())
 }
 
-/// Open an Epic page already signed in: our token → exchange code → web session.
-#[tauri::command]
-#[specta::specta]
-pub async fn open_epic_page(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    page: EpicPage,
-) -> Result<(), UiError> {
+/// Open an Epic page in the web window, signed in (development check only: the app shows
+/// these pages inside Settings, see `webpane`).
+pub(crate) async fn open_epic_page(app: &AppHandle, page: EpicPage) -> Result<(), UiError> {
     tracing::info!(?page, "opening Epic page");
     if page.needs_sign_in() {
-        open_signed_in(&app, page.url()).await
+        open_signed_in(app, page.url()).await
     } else {
-        open_web_window(&app, page.url(), state.paths.webview_web.clone())
+        let Some(state) = app.try_state::<AppState>() else {
+            return Err(UiError::internal("state"));
+        };
+        open_web_window(app, page.url(), state.paths.webview_web.clone())
     }
 }
 

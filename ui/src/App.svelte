@@ -103,6 +103,10 @@
     {#await import('./lib/components/LicensesDialog.svelte') then { default: LicensesDialog }}
       <LicensesDialog />
     {/await}
+  {:else if ui.dialog?.kind === 'doc'}
+    {#await import('./lib/components/DocDialog.svelte') then { default: DocDialog }}
+      <DocDialog doc={ui.dialog.doc} title={ui.dialog.title} />
+    {/await}
   {:else if ui.dialog?.kind === 'appUpdate'}
     {#await import('./lib/components/AppUpdateDialog.svelte') then { default: AppUpdateDialog }}
       <AppUpdateDialog version={ui.dialog.version} notes={ui.dialog.notes} />

@@ -1,5 +1,7 @@
 // Transient UI state: which popover is open, toasts.
 
+import type { BundledDoc } from '../bindings';
+
 export type Popover = 'profile' | 'wallet' | null;
 
 export type Dialog =
@@ -11,6 +13,8 @@ export type Dialog =
   /** Account edits, code redemption, hidden games (Settings, profile menu). */
   | { kind: 'account'; what: 'displayName' | 'language' | 'redeem' | 'hidden' }
   | { kind: 'licenses' }
+  /** A document that ships with the app (license, third-party notices). */
+  | { kind: 'doc'; doc: BundledDoc; title: string }
   /** A signed Next Launcher update is ready to install. */
   | { kind: 'appUpdate'; version: string; notes: string | null }
   /** Cloud saves changed in both places: which one to keep. */

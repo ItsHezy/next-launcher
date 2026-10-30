@@ -21,7 +21,8 @@ egs-download = { path = "../crates/egs-download" }
 egs-launch = { path = "../crates/egs-launch" }
 getrandom = "0.3"
 tokio = { version = "1", features = ["rt", "time", "sync"] }
-tauri = { version = "2.12", features = ["tray-icon"] }
+# "unstable": child webviews (Epic pages inside the main window, ADR 0016).
+tauri = { version = "2.12", features = ["tray-icon", "unstable"] }
 tauri-plugin-single-instance = "2.5"
 tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
 specta = { version = "=2.0.0-rc.26", features = ["derive"] }

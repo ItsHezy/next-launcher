@@ -3,7 +3,7 @@
 Crate: `egs-api::account`. Host `ACCOUNT` = `account-public-service-prod03.ol.epicgames.com`.
 
 Rule: use a real API when one exists **and** the launcher client has permission for it.
-Otherwise open Epic's own page in the signed-in **web window** (auth.md §6). The user
+Otherwise show Epic's own page, signed in (auth.md §6), inside Settings (ADR 0016). The user
 never types their password just to reach a setting.
 
 ## Endpoints

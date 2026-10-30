@@ -4,6 +4,7 @@
 import { boot } from '../boot';
 import { commands, events, type AuthStatus_Serialize, type EpicPage } from '../bindings';
 import { library } from './library.svelte';
+import { router, type SettingsSection } from './router.svelte';
 import { ui } from './ui.svelte';
 import { account } from './account.svelte';
 
@@ -55,13 +56,14 @@ class AuthState {
     if (res.status === 'error') ui.toast(res.error.message);
   }
 
-  async openEpicPage(page: EpicPage) {
+  /** Show Epic's page inside Settings, in the section it belongs to (no second window). */
+  openEpicPage(page: EpicPage) {
     if (!this.signedIn && !PUBLIC_PAGES.has(page)) {
       ui.toast('Sign in first to open your Epic account pages.');
       return;
     }
-    const res = await commands.openEpicPage(page);
-    if (res.status === 'error') ui.toast(res.error.message);
+    router.go('settings', PAGE_SECTION[page]);
+    router.epicPage = { page, title: PAGE_TITLES[page] };
   }
 
   async openCorrectiveAction() {
@@ -72,5 +74,45 @@ class AuthState {
 
 /** Epic pages that need no sign-in (help and legal). */
 const PUBLIC_PAGES = new Set<EpicPage>(['support', 'terms', 'privacyPolicy', 'refundPolicy', 'publisherIndex', 'eula']);
+
+const PAGE_SECTION: Record<EpicPage, SettingsSection> = {
+  accountPersonal: 'account',
+  password: 'account',
+  connections: 'account',
+  emailPreferences: 'account',
+  transactions: 'wallet',
+  paymentMethods: 'wallet',
+  wallet: 'wallet',
+  redeem: 'wallet',
+  gifts: 'wallet',
+  rewards: 'wallet',
+  vbucksCard: 'wallet',
+  support: 'support',
+  terms: 'legal',
+  privacyPolicy: 'legal',
+  refundPolicy: 'legal',
+  publisherIndex: 'legal',
+  eula: 'legal',
+};
+
+const PAGE_TITLES: Record<EpicPage, string> = {
+  accountPersonal: 'Account settings',
+  password: 'Password & security',
+  connections: 'Connections',
+  emailPreferences: 'Communication preferences',
+  transactions: 'Transaction history',
+  paymentMethods: 'Payment methods',
+  wallet: 'Wallet',
+  redeem: 'Redeem a code',
+  gifts: 'Gifts',
+  rewards: 'Epic Rewards',
+  vbucksCard: 'Redeem a V-Bucks card',
+  support: 'Help & support',
+  terms: 'Terms of Service',
+  privacyPolicy: 'Privacy Policy',
+  refundPolicy: 'Store Refund Policy',
+  publisherIndex: 'Publisher Index',
+  eula: 'End User License Agreement',
+};
 
 export const auth = new AuthState();

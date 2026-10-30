@@ -21,6 +21,7 @@ mod store;
 mod support;
 mod tray;
 mod updater;
+mod webpane;
 
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
@@ -107,7 +108,6 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             auth::auth_status,
             auth::sign_in,
             auth::sign_out,
-            auth::open_epic_page,
             auth::open_corrective_action,
             library::refresh_library,
             library::sync_status,
@@ -145,9 +145,13 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             support::hidden_games,
             support::set_hidden,
             support::pick_folder,
-            support::open_bundled,
+            support::read_bundled,
             updater::check_app_update,
             updater::install_app_update,
+            webpane::web_pane_open,
+            webpane::web_pane_bounds,
+            webpane::web_pane_visible,
+            webpane::web_pane_close,
             saves::cloud_save_status,
             saves::cloud_save_games,
             saves::cloud_save_sync,
@@ -354,6 +358,7 @@ fn main() {
             app.manage(auth::AuthState::new(api_client(proxy)?, boot.auth));
             app.manage(library::LibraryState::default());
             app.manage(install::DownloadsState::new(dev_install_root.clone()));
+            app.manage(webpane::PaneState::default());
             app.manage(launch::LaunchState::default());
             app.manage(account::AccountState::default());
             app.manage(saves::SavesState::default());
