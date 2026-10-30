@@ -17,6 +17,7 @@ export const DEFAULTS = {
   'downloads.pauseWhilePlaying': true,
   'downloads.simultaneous': 1,
   'downloads.autoUpdate': true,
+  'downloads.autoImport': true,
   'downloads.updateOnlyIdle': false,
   'downloads.verifyAfterInstall': false,
   'downloads.cacheSizeMb': 256,

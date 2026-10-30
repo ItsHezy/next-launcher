@@ -161,7 +161,8 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             launch::GameRunning,
             account::AccountChanged,
             saves::SaveSync,
-            updater::AppUpdateAvailable
+            updater::AppUpdateAvailable,
+            import::GamesImported
         ])
 }
 
@@ -307,10 +308,15 @@ fn main() {
     if let Some(root) = &dev_install_root {
         tracing::info!(root = %root.display(), "development install guard active");
     }
-    let result = tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+    let mut builder = tauri::Builder::default();
+    // One running copy per user, except development runs (install guard on): they have their
+    // own data folder and must neither hand over to nor wake an installed Next Launcher.
+    if dev_install_root.is_none() {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             tray::show_window(app)
-        }))
+        }));
+    }
+    let result = builder
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(invoke)

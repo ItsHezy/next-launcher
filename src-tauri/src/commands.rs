@@ -104,6 +104,7 @@ pub fn setting_on(cache: &Cache, key: &str) -> bool {
         key,
         "general.minimizeToTray"
             | "general.checkAppUpdates"
+            | "downloads.autoImport"
             | "general.showUninstalled"
             | "downloads.pauseWhilePlaying"
             | "downloads.autoUpdate"

@@ -11,4 +11,5 @@ Legendary ships so it can import the session. We won't do this:
   and gives us our own refresh token in the Windows credential store.
 
 Import of EGL *installs* (games on disk) stays in scope. It reads only the non-secret install
-manifests, and only adopts an install after the user confirms (egl-local-files.md).
+manifests and never writes to the game folders (egl-local-files.md; adopted automatically since
+ADR 0015).

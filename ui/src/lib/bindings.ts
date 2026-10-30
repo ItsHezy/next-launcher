@@ -100,6 +100,7 @@ export const events = {
 	authChanged: makeEvent<AuthChanged_Serialize, AuthChanged_Deserialize>("auth-changed"),
 	downloadProgress: makeEvent<DownloadProgress, DownloadProgress>("download-progress"),
 	gameRunning: makeEvent<GameRunning, GameRunning>("game-running"),
+	gamesImported: makeEvent<GamesImported, GamesImported>("games-imported"),
 	libraryChanged: makeEvent<LibraryChanged, LibraryChanged>("library-changed"),
 	moveProgress: makeEvent<MoveProgress, MoveProgress>("move-progress"),
 	saveSync: makeEvent<SaveSync, SaveSync>("save-sync"),
@@ -382,6 +383,11 @@ export type GameRow_Serialize = {
 export type GameRunning = {
 	appName: string,
 	running: boolean,
+};
+
+/**  Games from the official launcher were added to the library (automatic import). */
+export type GamesImported = {
+	titles: string[],
 };
 
 export type HiddenGame = {

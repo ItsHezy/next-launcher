@@ -126,6 +126,10 @@ class LibraryState {
     await events.syncStatusChanged.listen((e) => (this.sync = e.payload));
     await events.downloadProgress.listen((e) => (this.progress = e.payload));
     await events.gameRunning.listen((e) => this.setRunning(e.payload.appName, e.payload.running));
+    await events.gamesImported.listen((e) => {
+      const t = e.payload.titles;
+      ui.toast(`Added ${t.length === 1 ? t[0] : `${t.length} games`} from the Epic Games Launcher.`);
+    });
     await events.saveSync.listen((e) => {
       const { appName, state, message } = e.payload;
       if (state === 'failed') ui.toast(`Cloud saves: ${message}`);

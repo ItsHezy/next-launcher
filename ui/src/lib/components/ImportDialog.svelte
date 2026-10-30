@@ -57,6 +57,8 @@
     <p class="lead">
       Games the Epic Games Launcher already installed can be used here without downloading them again.
       Next Launcher only reads these folders. Nothing in them, or in the Epic Games Launcher, changes.
+      Complete games you own are added automatically after each library refresh (Settings → Downloads &amp;
+      installs).
     </p>
 
     {#if error}

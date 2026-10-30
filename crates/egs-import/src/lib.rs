@@ -86,6 +86,8 @@ pub struct EglInstall {
     /// `.egstore\bps` or `.egstore\Pending` has files: an interrupted update.
     pub pending_update: bool,
     pub folder_exists: bool,
+    /// `LaunchExecutable` is present in the folder (or the item names none).
+    pub executable_found: bool,
     pub launch_executable: String,
     pub launch_command: String,
     pub can_run_offline: bool,
@@ -94,9 +96,14 @@ pub struct EglInstall {
 }
 
 impl EglInstall {
-    /// Safe to offer as "use this install": complete, folder and manifest present, a real game.
+    /// Safe to offer as "use this install": complete, folder, manifest and executable present, a
+    /// real game. (Our uninstall deletes a game's files but leaves EGL's records and `.egstore`.)
     pub fn adoptable(&self) -> bool {
-        self.folder_exists && self.manifest_ok && !self.incomplete && !self.is_content_pack
+        self.folder_exists
+            && self.manifest_ok
+            && self.executable_found
+            && !self.incomplete
+            && !self.is_content_pack
     }
 
     /// Adopted installs are verified before their first launch/update when this is true.
@@ -152,6 +159,8 @@ fn to_install(item: ItemFile) -> EglInstall {
         PathBuf::from(&item.staging_location)
     };
     EglInstall {
+        executable_found: item.launch_executable.is_empty()
+            || location.join(&item.launch_executable).is_file(),
         manifest_ok: manifest_header_ok(&manifest_path),
         pending_update: dir_has_files(&staging) || dir_has_files(&egstore.join("Pending")),
         folder_exists: location.is_dir(),
@@ -237,6 +246,8 @@ mod tests {
         if pending {
             fs::write(egstore.join("Pending").join("x.manifest"), b"x").unwrap();
         }
+        fs::create_dir_all(game.join("Bin")).unwrap();
+        fs::write(game.join("Bin").join("Game.exe"), b"MZ").unwrap();
         let item = serde_json::json!({
             "FormatVersion": 0,
             "AppName": if hidden { "ContentPack" } else { "SampleGame" },
@@ -304,6 +315,17 @@ mod tests {
         fs::remove_dir_all(&game).unwrap();
         let g = scan(&root).unwrap().pop().unwrap();
         assert!(!g.folder_exists && !g.manifest_ok && !g.adoptable());
+    }
+
+    #[test]
+    fn install_without_its_executable_is_not_adoptable() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("ProgramData");
+        let game = tmp.path().join("Games").join("Sample");
+        fixture(&root, &game, false, false, false);
+        fs::remove_file(game.join("Bin").join("Game.exe")).unwrap();
+        let g = scan(&root).unwrap().pop().unwrap();
+        assert!(g.folder_exists && g.manifest_ok && !g.executable_found && !g.adoptable());
     }
 
     #[test]

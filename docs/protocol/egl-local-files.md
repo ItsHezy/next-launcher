@@ -90,9 +90,11 @@ through our own login. We don't read other values either in v1.
    `bIsIncompleteInstall == false`, and the app is in our assets list (owned).
 3. Show the list: name, folder, size, build, and "needs verify" if `bps`/`Pending` aren't empty or
    `bNeedsValidation`.
-4. On the user's confirmation per game ("Use this install from F:\Fortnite"), we **copy** the
-   manifest into our manifest store and create our `games` row pointing at the folder. EGL's files
-   stay untouched and EGL keeps working with the same folder.
+4. Adopt: we **copy** the manifest into our manifest store and create our `games` row pointing at
+   the folder. EGL's files stay untouched and EGL keeps working with the same folder. Since
+   ADR 0015 this happens automatically after each library sync for every candidate that passes
+   step 2 (plus: `LaunchExecutable` present, not uninstalled here before); the Import dialog
+   still does it per game.
 5. Before the first update/verify/uninstall/move of an adopted install, show a one-time warning
    naming the folder ("This folder is also managed by the Epic Games Launcher. Updating it here
    will make the Epic Games Launcher re-check it."). No EGL `.item` is rewritten in v1.

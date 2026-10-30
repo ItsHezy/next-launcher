@@ -171,6 +171,7 @@ async fn run(app: AppHandle) {
                         last_sync: Some(now_unix() as f64),
                     },
                 );
+                crate::import::auto_import(&app).await;
                 crate::install::auto_update(&app).await;
             }
             Err(e) => {

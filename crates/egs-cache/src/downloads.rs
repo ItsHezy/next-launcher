@@ -33,6 +33,8 @@ pub struct GameInstall {
     pub install_path: Option<String>,
     pub install_tags: Vec<String>,
     pub egl_managed: bool,
+    /// The official launcher's `InstallationGuid` of an adopted install.
+    pub egl_guid: Option<String>,
     pub needs_verify: bool,
     pub owner: Option<String>,
     pub meta_json: Option<String>,
@@ -51,7 +53,8 @@ impl Cache {
         Ok(conn
             .query_row(
                 "SELECT app_name, namespace, catalog_item_id, title, install_state, version, latest_version,
-                        install_path, install_tags, egl_managed, needs_verify, owner, meta_json, artifact_id
+                        install_path, install_tags, egl_managed, needs_verify, owner, meta_json, artifact_id,
+                        egl_guid
                  FROM games WHERE app_name = ?1",
                 params![app_name],
                 |r| {
@@ -70,6 +73,7 @@ impl Cache {
                         owner: r.get(11)?,
                         meta_json: r.get(12)?,
                         artifact_id: r.get(13)?,
+                        egl_guid: r.get(14)?,
                     })
                 },
             )

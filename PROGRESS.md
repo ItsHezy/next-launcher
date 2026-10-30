@@ -13,6 +13,14 @@
 - [x] **Phase 8: Cloud saves** (2026-10-29). Download, upload, conflict handling and launch/exit sync verified with one game; local saves always backed up before a download.
 - [x] **Phase 9: Polish and ship** (2026-10-30). Tray, autostart, notifications, crash-safe updates, accessibility, notices, license, app updater and release pipeline. **v0.1.0 released** (https://github.com/ItsHezy/next-launcher/releases/tag/v0.1.0). Open: code-signing certificate (optional), startup re-measure on an idle machine.
 
+## After v0.1.0
+
+- **Automatic import** (ADR 0015): after every library sync, games the Epic Games Launcher installed
+  are added as installed if the account owns them and the install is complete. Read-only, verified
+  live with Fortnite on `F:\Fortnite` (no file there or in EGL's data changed); a second sync adds
+  nothing; uninstalled-here installs aren't re-added (unit-tested). Setting in Downloads & installs.
+- Development builds run next to an installed Next Launcher instead of handing over to it.
+
 ## Phase 9 summary (what doesn't need the owner)
 
 What works (verified live unless noted):

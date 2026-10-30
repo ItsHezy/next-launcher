@@ -198,7 +198,13 @@ export const SECTIONS: Section[][] = [
           title: 'Location',
           rows: [
             { kind: 'folder', label: 'Default install folder', key: 'downloads.installDir' },
-            { kind: 'button', label: 'Import existing installation', desc: 'Use games already installed by the Epic Games Launcher', button: 'Import…', action: { type: 'import' } },
+            {
+              kind: 'toggle',
+              label: 'Add games from the Epic Games Launcher',
+              desc: 'Games it installed show up here as installed, without downloading them again. Their folders are not changed.',
+              key: 'downloads.autoImport',
+            },
+            { kind: 'button', label: 'Import existing installation', desc: 'See what the Epic Games Launcher installed and add games by hand', button: 'Import…', action: { type: 'import' } },
           ],
         },
         {

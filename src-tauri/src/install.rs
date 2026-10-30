@@ -1447,6 +1447,9 @@ pub async fn uninstall_installed(
         .map_err(|e| err("uninstall", format!("Couldn't remove all files: {e}")))?;
     let _ = tokio::fs::remove_dir_all(state.paths.manifests.join(app_name)).await;
     state.cache.mark_uninstalled(app_name)?;
+    if let Some(guid) = game.egl_guid.as_deref().filter(|_| game.egl_managed) {
+        crate::import::remember_removed(&state, guid);
+    }
     tracing::info!(removed, "uninstalled");
     emit_changed(app, "uninstall");
     Ok(())
