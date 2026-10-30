@@ -6,7 +6,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
-use tauri_plugin_updater::{UpdaterBuilder, UpdaterExt};
+use tauri_plugin_updater::{Update, UpdaterBuilder, UpdaterExt};
 use tauri_specta::Event;
 
 use crate::commands::{setting_on, settings_value, AppState, UiError};
@@ -85,6 +85,22 @@ fn build(b: UpdaterBuilder) -> Result<tauri_plugin_updater::Updater, UiError> {
     b.build().map_err(|e| err("updater", e.to_string()))
 }
 
+/// Ask the update address. No published release yet (it answers 404) means nothing newer;
+/// the release workflow checks that the address is this repository's.
+async fn check(b: UpdaterBuilder) -> Result<Option<Update>, UiError> {
+    match build(b)?.check().await {
+        Ok(found) => Ok(found),
+        Err(tauri_plugin_updater::Error::ReleaseNotFound) => Ok(None),
+        Err(e) => {
+            tracing::warn!(error = %e, "update check failed");
+            Err(err(
+                "updater",
+                "Couldn't check for updates. Try again later.",
+            ))
+        }
+    }
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn check_app_update(app: AppHandle) -> Result<AppUpdate, UiError> {
@@ -98,10 +114,7 @@ pub async fn check_app_update(app: AppHandle) -> Result<AppUpdate, UiError> {
             notes: None,
         });
     };
-    let found = build(b)?.check().await.map_err(|e| {
-        tracing::warn!(error = %e, "update check failed");
-        err("updater", "Couldn't check for updates. Try again later.")
-    })?;
+    let found = check(b).await?;
     record_check(&app);
     Ok(AppUpdate {
         current,
@@ -133,10 +146,8 @@ pub async fn install_app_update(app: AppHandle) -> Result<(), UiError> {
         tracing::info!("closing for the update");
         crate::launch::on_exit(&handle);
     });
-    let update = build(b)?
-        .check()
-        .await
-        .map_err(|e| err("updater", e.to_string()))?
+    let update = check(b)
+        .await?
         .ok_or_else(|| err("upToDate", "You already have the latest version."))?;
     tracing::info!(version = %update.version, "installing app update");
     update
@@ -218,11 +229,7 @@ pub async fn dev_action(app: &AppHandle, what: &str) -> Result<String, UiError> 
         ));
     }
     let b = builder(app)?.ok_or_else(|| err("notConfigured", "not configured"))?;
-    let found = build(b)?
-        .check()
-        .await
-        .map_err(|e| err("updater", e.to_string()))?;
-    let Some(update) = found else {
+    let Some(update) = check(b).await? else {
         return Ok("up to date".into());
     };
     if what != "download" {
