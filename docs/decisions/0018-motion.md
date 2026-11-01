@@ -61,6 +61,6 @@ Amends ADR 0007's accessibility line on `prefers-reduced-motion` (see **Setting*
   8–13 ms; the fade-up plays after that. Startup is untouched (nothing animates until it's done).
 - **Verified live (dev build, Animations On, through the UI view's debugger):** every animation
   above runs on its trigger; the gliding highlights sit exactly on the chosen item; the accent is
-  mid-blend 120 ms after a change; with Match Windows on this PC, menu items are fully shown 30 ms
-  after opening, the accent changes at once and a message's line is hidden; Match Windows on this PC and Off run none, and a closing dialog then
-  leaves at once; removing one of two Quick Launch games moves the other into place.
+  mid-blend 120 ms after a change. Match Windows on this PC and Off run none: a closing dialog
+  leaves at once, menu items are fully shown 30 ms after opening, the accent changes at once and a
+  message's line is hidden. Removing one of two Quick Launch games moves the other into place.
