@@ -4,7 +4,7 @@
   import { num } from '../../lib/boot';
   import Icon from '../../lib/components/Icon.svelte';
   import Markdown from '../../lib/components/Markdown.svelte';
-  import { arrive } from '../../lib/motion';
+  import { rise } from '../../lib/motion';
   import { library } from '../../lib/state/library.svelte';
   import { router } from '../../lib/state/router.svelte';
   import { freeLabel, store, type Offer } from '../../lib/state/store.svelte';
@@ -14,6 +14,11 @@
   let product = $state.raw<Product | null>(null);
   let error = $state<string | null>(null);
   let failed = $state(false);
+  // The picture fades in and settles as it arrives; already cached, it just shows.
+  let shown = $state(false);
+  const ready = (img: HTMLImageElement) => {
+    if (img.complete && img.naturalWidth > 0) shown = true;
+  };
 
   // Details refine what the grid already showed (price, ownership).
   const view = $derived(product?.offer ?? offer);
@@ -33,6 +38,7 @@
     product = null;
     error = null;
     failed = false;
+    shown = false;
     void commands.storeProduct(o.namespace, o.id).then((res) => {
       if (store.product !== o) return;
       if (res.status === 'ok') product = res.data;
@@ -54,23 +60,32 @@
   });
 </script>
 
-<div class="product" use:arrive>
-  <button class="back btn btn-quiet" onclick={() => (store.product = null)}>
+<!-- The page builds in from the top: heading, picture, purchase box, then the details as they arrive. -->
+<div class="product">
+  <button use:rise class="back btn btn-quiet lean-l" onclick={() => (store.product = null)}>
     <Icon name="chevronLeft" size={18} /> Store
   </button>
 
   <div class="layout">
     <div class="main">
-      <h1>{view.title}</h1>
-      <p class="by">
+      <h1 use:rise>{view.title}</h1>
+      <p class="by" use:rise>
         {[product?.developer || view.seller, product?.publisher && product.publisher !== product.developer ? product.publisher : null]
           .filter(Boolean)
           .join(' · ')}
       </p>
 
-      <div class="media">
+      <div class="media" use:rise>
         {#if view.imageWide && !failed}
-          <img src={view.imageWide} alt="" decoding="async" onerror={() => (failed = true)} />
+          <img
+            src={view.imageWide}
+            alt=""
+            decoding="async"
+            class:shown
+            use:ready
+            onload={() => (shown = true)}
+            onerror={() => (failed = true)}
+          />
         {:else}
           <span class="ph" aria-hidden="true">{view.title}</span>
         {/if}
@@ -78,20 +93,25 @@
 
       {#if product}
         {#if product.genres.length || product.features.length}
-          <ul class="tags" aria-label="Genres and features">
+          <ul class="tags" aria-label="Genres and features" use:rise>
             {#each [...product.genres, ...product.features] as t (t)}<li>{t}</li>{/each}
           </ul>
         {/if}
-        {#if product.description}<p class="lead">{product.description}</p>{/if}
-        {#if product.longDescription}<Markdown source={product.longDescription} />{/if}
+        {#if product.description}<p class="lead" use:rise>{product.description}</p>{/if}
+        {#if product.longDescription}<div use:rise><Markdown source={product.longDescription} /></div>{/if}
       {:else if error}
         <p class="msg err">{error}</p>
       {:else}
-        <p class="msg">Loading details…</p>
+        <div class="loading" role="status">
+          <span class="sr-only">Loading details…</span>
+          <div class="shimmer bar" aria-hidden="true"></div>
+          <div class="shimmer bar" aria-hidden="true"></div>
+          <div class="shimmer bar short" aria-hidden="true"></div>
+        </div>
       {/if}
     </div>
 
-    <aside class="buy" aria-label="Price and purchase">
+    <aside class="buy" aria-label="Price and purchase" use:rise>
       {#if view.owned}
         <p class="owned"><Icon name="check" size={18} /> In your library</p>
         <button class="btn btn-primary wide" onclick={() => router.go('library')}>Go to Library</button>
@@ -151,6 +171,27 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    opacity: 0;
+    transform: scale(1.05);
+    transition:
+      opacity var(--dur-slow) var(--ease-out),
+      transform 900ms var(--ease-out);
+  }
+  .media img.shown {
+    opacity: 1;
+    transform: none;
+  }
+  .loading {
+    max-width: 760px;
+    margin: 18px 0;
+  }
+  .bar {
+    height: 14px;
+    margin-bottom: 10px;
+    border-radius: 7px;
+  }
+  .bar.short {
+    width: 55%;
   }
   .ph {
     position: absolute;

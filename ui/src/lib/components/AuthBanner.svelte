@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { slide } from '../motion';
   import { auth } from '../state/auth.svelte';
   import Icon from './Icon.svelte';
 
@@ -6,7 +7,7 @@
 </script>
 
 {#if s.state === 'signedOut'}
-  <div class="banner" role="status">
+  <div class="banner" in:slide={{ y: -8 }} role="status">
     <Icon name="user" size={20} />
     <div class="txt">
       <strong>{s.reason ?? 'Sign in to Epic Games'}</strong>
@@ -15,7 +16,7 @@
     <button class="btn btn-primary" onclick={() => auth.signIn()}>Sign in</button>
   </div>
 {:else if s.state === 'signingIn'}
-  <div class="banner" role="status">
+  <div class="banner" in:slide={{ y: -8 }} role="status">
     <Icon name="user" size={20} />
     <div class="txt">
       <strong>Signing in…</strong>
@@ -23,7 +24,7 @@
     </div>
   </div>
 {:else if s.state === 'offline'}
-  <div class="banner warn" role="status">
+  <div class="banner warn" in:slide={{ y: -8 }} role="status">
     <Icon name="globe" size={20} />
     <div class="txt">
       <strong>Couldn't reach Epic's servers</strong>
@@ -31,7 +32,7 @@
     </div>
   </div>
 {:else if s.state === 'needsAction'}
-  <div class="banner warn" role="status">
+  <div class="banner warn" in:slide={{ y: -8 }} role="status">
     <Icon name="shield" size={20} />
     <div class="txt">
       <strong>Epic needs you to confirm something</strong>

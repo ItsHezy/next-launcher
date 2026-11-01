@@ -29,12 +29,33 @@
     background: #3a3c40;
     border: 1px solid var(--border);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-    animation: up var(--dur) var(--ease-spring);
+    position: relative;
+    overflow: hidden;
+    animation: up var(--dur-slow) var(--ease-spring);
+  }
+  /* How long it stays: a line that runs out (ui.toast keeps it 3.2 s). */
+  .toast::after {
+    content: '';
+    position: absolute;
+    left: 22px;
+    right: 22px;
+    bottom: 0;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--accent-text);
+    opacity: 0.55;
+    transform-origin: left;
+    animation: run-out 3200ms linear forwards;
   }
   @keyframes up {
     from {
       opacity: 0;
-      transform: translateY(8px);
+      transform: translateY(12px) scale(0.92);
+    }
+  }
+  @keyframes run-out {
+    to {
+      transform: scaleX(0);
     }
   }
 </style>

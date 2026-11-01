@@ -19,6 +19,13 @@
     U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* Typed, so a new accent blends across the app instead of switching (Settings › Appearance). */
+@property --accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #0a6fd6;
+}
+
 :root {
   --bg: #26282a;
   --surface: #2e3033;
@@ -56,6 +63,7 @@
 
   --font: 'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
   color-scheme: dark;
+  transition: --accent 450ms var(--ease-out);
 }
 
 *,
@@ -225,7 +233,11 @@ input:focus-visible {
   color: var(--text-2);
   transition:
     background-color var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out);
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-spring);
+}
+.icon-btn:active:not(:disabled) {
+  transform: scale(0.9);
 }
 .icon-btn:hover {
   background: var(--hover);
@@ -282,6 +294,80 @@ input:focus-visible {
     transform: translateY(-4px) scale(0.97);
   }
 }
+/* What's in a menu follows it in, top to bottom. */
+.menu > * {
+  animation: item-in var(--dur) var(--ease-out) backwards;
+}
+.menu > :nth-child(2) {
+  animation-delay: 20ms;
+}
+.menu > :nth-child(3) {
+  animation-delay: 40ms;
+}
+.menu > :nth-child(4) {
+  animation-delay: 60ms;
+}
+.menu > :nth-child(5) {
+  animation-delay: 80ms;
+}
+.menu > :nth-child(6) {
+  animation-delay: 100ms;
+}
+.menu > :nth-child(n + 7) {
+  animation-delay: 120ms;
+}
+@keyframes item-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* The highlight that glides to the chosen item (glide in lib/motion.ts). */
+.glide {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: var(--glide-radius, var(--radius-sm));
+  background: var(--glide-bg, var(--selected-strong));
+  pointer-events: none;
+}
+.glide.on {
+  transition:
+    transform var(--dur-slow) var(--ease-spring),
+    width var(--dur-slow) var(--ease-spring),
+    height var(--dur-slow) var(--ease-spring);
+}
+
+/* Icons that answer the pointer: a gear turns, a heart beats, an arrow leans its way. */
+.turn :where(svg),
+.lean-l :where(svg),
+.lean-r :where(svg) {
+  transition: transform 420ms var(--ease-spring);
+}
+.turn:hover :where(svg) {
+  transform: rotate(75deg);
+}
+.lean-l:hover :where(svg) {
+  transform: translateX(-3px);
+}
+.lean-r:hover :where(svg) {
+  transform: translateX(3px);
+}
+.beat:hover :where(svg) {
+  animation: beat 700ms var(--ease-out);
+}
+@keyframes beat {
+  25% {
+    transform: scale(1.22);
+  }
+  45% {
+    transform: scale(0.94);
+  }
+  65% {
+    transform: scale(1.1);
+  }
+}
 
 /* A light sweeping across something that is loading or working (skeletons, a download). */
 @keyframes sheen {
@@ -291,6 +377,20 @@ input:focus-visible {
   to {
     transform: translateX(100%);
   }
+}
+
+/* A placeholder for something loading: a surface with a light sweeping across. */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+}
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 25%, rgba(255, 255, 255, 0.05) 50%, transparent 75%);
+  animation: sheen 1.4s ease-in-out infinite;
 }
 
 /* A running game: a dot that softly pulses beside "Playing". */
@@ -325,20 +425,26 @@ input:focus-visible {
 /* No motion when Settings › General › Animations is Off, or Match Windows and Windows asks for
  * less ("Animation effects" off). Script-played motion checks the same (lib/motion.ts). */
 @media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']),
   :root:not([data-motion='on']) *,
   :root:not([data-motion='on']) *::before,
   :root:not([data-motion='on']) *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 }
+:root[data-motion='off'],
 :root[data-motion='off'] *,
 :root[data-motion='off'] *::before,
 :root[data-motion='off'] *::after {
   animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
+  transition-delay: 0s !important;
   scroll-behavior: auto !important;
 }

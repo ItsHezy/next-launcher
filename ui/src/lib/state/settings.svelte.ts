@@ -80,8 +80,20 @@ export const settings = new SettingsState();
 
 /** Apply the accent token and the animations switch whenever they change. */
 export function applyAppearance() {
+  // A new accent blends in (app.css); the first one, at start-up, is simply there.
+  let first = true;
   $effect(() => {
-    document.documentElement.style.setProperty('--accent', settings.get('general.accent'));
+    const root = document.documentElement;
+    const accent = settings.get('general.accent');
+    if (!first) {
+      root.style.setProperty('--accent', accent);
+      return;
+    }
+    first = false;
+    root.style.transition = 'none';
+    root.style.setProperty('--accent', accent);
+    void getComputedStyle(root).getPropertyValue('--accent');
+    root.style.removeProperty('transition');
   });
   $effect(() => {
     document.documentElement.dataset.motion = settings.get('general.animations');

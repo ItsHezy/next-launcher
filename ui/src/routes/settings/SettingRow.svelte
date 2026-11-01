@@ -272,7 +272,19 @@
       0 0 0 2px var(--surface-inset),
       0 0 0 4px rgba(255, 255, 255, 0.8);
   }
+  .swatch:hover {
+    transform: scale(1.08);
+  }
   .swatch:active {
     transform: scale(0.92);
+  }
+  .swatch :global(svg) {
+    animation: tick-in var(--dur-slow) var(--ease-spring);
+  }
+  @keyframes tick-in {
+    from {
+      opacity: 0;
+      transform: scale(0.4) rotate(-30deg);
+    }
   }
 </style>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { dismiss } from '../actions';
+  import { bump } from '../motion';
   import { account } from '../state/account.svelte';
   import { auth } from '../state/auth.svelte';
   import { library } from '../state/library.svelte';
@@ -80,10 +81,10 @@
     {:else}
       <button class="icon-btn" aria-label="Search" onclick={openSearch}><Icon name="search" /></button>
     {/if}
-    <button class="icon-btn" aria-label="Wishlist (Epic's page)" onclick={() => store.openEpic({ kind: 'wishlist' }, 'Wishlist')}>
+    <button class="icon-btn beat" aria-label="Wishlist (Epic's page)" onclick={() => store.openEpic({ kind: 'wishlist' }, 'Wishlist')}>
       <Icon name="heart" />
     </button>
-    <button class="icon-btn" aria-label="Cart (Epic's page)" onclick={() => store.openEpic({ kind: 'cart' }, 'Cart')}>
+    <button class="icon-btn lean-r" aria-label="Cart (Epic's page)" onclick={() => store.openEpic({ kind: 'cart' }, 'Cart')}>
       <Icon name="cart" />
     </button>
 
@@ -98,7 +99,7 @@
         onclick={() => ui.toggle('wallet')}
       >
         <Icon name="wallet" size={18} />
-        <span>{account.wallet?.balance ?? 'Wallet'}</span>
+        <span use:bump={account.wallet?.balance}>{account.wallet?.balance ?? 'Wallet'}</span>
       </button>
       {#if ui.popover === 'wallet'}
         <div use:dismiss={{ onclose: () => ui.close(), trigger: () => walletBtn }}>
@@ -111,7 +112,7 @@
     <span class="divider" aria-hidden="true"></span>
 
     <button
-      class="icon-btn"
+      class="icon-btn turn"
       aria-label="Settings"
       aria-pressed={router.route === 'settings'}
       onclick={() => router.go('settings', 'general')}
@@ -225,8 +226,17 @@
     place-items: center;
     width: var(--hit);
     border-radius: 50%;
+    transition: transform var(--dur) var(--ease-spring);
+  }
+  .avatar-btn:hover,
+  .avatar-btn[aria-expanded='true'] {
+    transform: scale(1.06);
+  }
+  .avatar-btn:active {
+    transform: scale(0.94);
   }
   .badge {
+    animation: badge-in var(--dur-slow) var(--ease-spring);
     position: absolute;
     right: 4px;
     top: 6px;
@@ -235,6 +245,11 @@
     border-radius: 50%;
     background: var(--warning);
     box-shadow: 0 0 0 2px var(--surface);
+  }
+  @keyframes badge-in {
+    from {
+      transform: scale(0);
+    }
   }
   .sign-in {
     margin-left: 4px;

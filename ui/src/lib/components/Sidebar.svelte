@@ -1,12 +1,23 @@
 <script lang="ts">
   import { num } from '../boot';
-  import { library } from '../state/library.svelte';
+  import { library, type Game } from '../state/library.svelte';
   import * as actions from '../gameActions';
-  import { shift, slide } from '../motion';
+  import { bump, shift, slide } from '../motion';
   import { router } from '../state/router.svelte';
   import Cover from './Cover.svelte';
   import DownloadCard from './DownloadCard.svelte';
   import Icon from './Icon.svelte';
+
+  /** The line under a Quick Launch game; it bumps when its kind changes. */
+  function status(g: Game) {
+    if (library.running.has(g.appName)) return { kind: 'playing', text: 'Playing', cls: 'status-active' };
+    if (library.starting.has(g.appName)) return { kind: 'starting', text: 'Starting…', cls: 'status-active' };
+    if (g.state === 'installed') return { kind: 'ready', text: 'Ready', cls: 'status-ready' };
+    if (g.state === 'updateAvailable') return { kind: 'update', text: 'Update', cls: 'status-update' };
+    if (g.state === 'installing' && library.download?.appName === g.appName)
+      return { kind: 'installing', text: `Installing ${dlPct}%`, cls: 'status-active' };
+    return { kind: 'none', text: 'Not installed', cls: 'muted' };
+  }
 
   const dlPct = $derived(
     library.download
@@ -32,19 +43,9 @@
             <span class="thumb"><Cover game={g} kind="thumb" /></span>
             <span class="txt">
               <span class="name">{g.title}</span>
-              {#if library.running.has(g.appName)}
-                <span class="st status-active"><span class="live" aria-hidden="true"></span>Playing</span>
-              {:else if library.starting.has(g.appName)}
-                <span class="st status-active">Starting…</span>
-              {:else if g.state === 'installed'}
-                <span class="st status-ready">Ready</span>
-              {:else if g.state === 'updateAvailable'}
-                <span class="st status-update">Update</span>
-              {:else if g.state === 'installing' && library.download?.appName === g.appName}
-                <span class="st status-active">Installing {dlPct}%</span>
-              {:else}
-                <span class="st muted">Not installed</span>
-              {/if}
+              <span class="st {status(g).cls}" use:bump={status(g).kind}>
+                {#if status(g).kind === 'playing'}<span class="live" aria-hidden="true"></span>{/if}{status(g).text}
+              </span>
             </span>
           </button>
         </li>
@@ -60,7 +61,7 @@
     </div>
   {/if}
 
-  <button class="settings-link" onclick={() => router.go('settings', 'general')}>
+  <button class="settings-link turn" onclick={() => router.go('settings', 'general')}>
     <Icon name="gear" size={20} />
     <span>Settings</span>
   </button>
@@ -118,6 +119,13 @@
     flex: none;
     border-radius: 10px;
     overflow: hidden;
+    transition: transform var(--dur) var(--ease-spring);
+  }
+  .ql-item:hover .thumb {
+    transform: scale(1.08);
+  }
+  .ql-item:active .thumb {
+    transform: scale(0.94);
   }
   .txt {
     display: flex;
@@ -132,6 +140,7 @@
   }
   .st {
     font-size: 12.5px;
+    transform-origin: left center;
   }
   .muted {
     color: var(--text-2);

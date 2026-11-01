@@ -77,6 +77,82 @@ export function rise(node: Element) {
   play(node, RISE, { duration: 340, delay: step(group++), easing: EASE_SPRING, fill: 'backwards' });
 }
 
+/** Action: a short bump when `key` changes (a game's status, a count), never when first shown. */
+export function bump(node: Element, _key: unknown) {
+  return {
+    update() {
+      play(
+        node,
+        [
+          { opacity: 0.3, transform: 'scale(0.86)' },
+          { opacity: 1, transform: 'scale(1.06)', offset: 0.6 },
+          { opacity: 1, transform: 'none' },
+        ],
+        { duration: 340, easing: EASE_OUT },
+      );
+    },
+  };
+}
+
+/** Action: one highlight that glides to the chosen item inside `node` (the first match of
+ * `selector`), behind the items. Pass a `key` that changes whenever the choice may have moved.
+ * `node` must be positioned and its items `position: relative` (so they draw above it); while
+ * it shows, `node` has the class `glides`, so the chosen item can drop its own background. */
+export function glide(node: HTMLElement, opts: { selector: string; key: unknown }) {
+  let selector = opts.selector;
+  const pill = document.createElement('span');
+  pill.className = 'glide';
+  pill.setAttribute('aria-hidden', 'true');
+  pill.hidden = true;
+  node.prepend(pill);
+  let frame = 0;
+
+  const place = () => {
+    const el = node.querySelector<HTMLElement>(selector);
+    if (!el) {
+      pill.hidden = true;
+      node.classList.remove('glides');
+      return;
+    }
+    // Not on screen (a hidden view): placed again when it shows.
+    if (el.offsetWidth === 0) return;
+    // Layout offsets, so a parent's entrance (scale, translate) doesn't skew the result.
+    let x = 0;
+    let y = 0;
+    for (let e: HTMLElement | null = el; e && e !== node; e = e.offsetParent as HTMLElement | null) {
+      x += e.offsetLeft;
+      y += e.offsetTop;
+    }
+    // Showing again after it was hidden: jump there, then glide from there on.
+    const jump = pill.hidden;
+    if (jump) pill.classList.remove('on');
+    pill.hidden = false;
+    node.classList.add('glides');
+    pill.style.transform = `translate(${x}px, ${y}px)`;
+    pill.style.width = `${el.offsetWidth}px`;
+    pill.style.height = `${el.offsetHeight}px`;
+    if (jump) {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => pill.classList.add('on'));
+    }
+  };
+
+  const ro = new ResizeObserver(place);
+  ro.observe(node);
+  place();
+  return {
+    update(next: { selector: string; key: unknown }) {
+      selector = next.selector;
+      place();
+    },
+    destroy() {
+      ro.disconnect();
+      cancelAnimationFrame(frame);
+      pill.remove();
+    },
+  };
+}
+
 /** Action: a panel fades in when it's added (no movement, e.g. around Epic's page). */
 export function appear(node: Element) {
   play(node, [{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: EASE_OUT });

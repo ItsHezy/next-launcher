@@ -18,6 +18,8 @@ case: cover art fades as tiles mount while scrolling).
 | Library scroll, 600 games | 60 fps | **198.4 fps** mean (5.04 ms/frame, 200 Hz), p99 5.1 ms, 2/359 frames > 1.5× vsync ✅ (unchanged) |
 | Tab switch (DOM shown; the fade-up plays after it) | ≤ 50 ms | **7.7–12.9 ms** ✅ |
 | Initial / total JS (gz) | 80 / 250 KB | **42.6 / 77.9 KB** ✅ (+3.4 / +3.9 KB: Svelte transitions, flip, `motion.ts`) |
+| Second round (more motion): library scroll, 600 games | 60 fps | **200 fps** mean, p99 5.1 ms, max 5.2 ms, 0/359 frames > 1.5× vsync ✅ |
+| Second round: tab switch / initial / total JS | ≤ 50 ms / 80 / 250 KB | **10–15 ms** / **43.0 / 78.8 KB** ✅ |
 | Accessibility (axe-core, 17 views) | 0 serious | **0 violations** ✅ |
 
 ## Phase 9 (2026-10-30): polish
@@ -245,5 +247,7 @@ powershell -ExecutionPolicy Bypass -File tools/measure-idle.ps1                 
 powershell -ExecutionPolicy Bypass -File tools/measure-idle.ps1 -DataDir .dev-data/bench600 -Route settings:general
 target/release/next-launcher.exe --bench-scroll --mock-games 600 --data-dir .dev-data/bench600
                                                    # → .dev-data/bench600/logs/bench-scroll.json
+                                                   # add --dev-install-root <folder> while an installed
+                                                   # Next Launcher runs, or it hands over to that one
 target/release/next-launcher.exe --bench-startup   # prints the timeline (also logs/startup.json)
 ```

@@ -39,7 +39,13 @@
   menus, popovers, toasts, Quick Launch games and the download card animate in and out; a working
   download's bar has a moving light, "Playing" a pulsing dot. New setting General › Appearance ›
   Animations: Match Windows (default), On, Off. The owner's Windows has animation effects off, so
-  On is needed there to see any motion. Verified live in the dev build.
+  On is needed there to see any motion. Verified live in the dev build. **Released as v0.1.4.**
+- **More animations** (ADR 0018, second round): gliding highlights in the Settings sidebar and the
+  Store's categories; Settings pages, the product page, dialogs and menus build in piece by piece;
+  shimmering placeholders while the store and product details load; statuses, counts, the sync
+  line and the wallet balance bump when they change; a new accent blends across the app; messages
+  show how long they stay; icons, switches, swatches, tiles and buttons answer the pointer.
+  Scroll bench 200 fps with Animations On.
 
 ## Phase 9 summary (what doesn't need the owner)
 

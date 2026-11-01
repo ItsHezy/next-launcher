@@ -83,6 +83,18 @@
     outline: none;
     animation: pop var(--dur) var(--ease-spring);
   }
+  .dialog > :global(*) {
+    animation: item-in var(--dur-slow) var(--ease-out) backwards;
+  }
+  .dialog > :global(:nth-child(2)) {
+    animation-delay: 40ms;
+  }
+  .dialog > :global(:nth-child(3)) {
+    animation-delay: 80ms;
+  }
+  .dialog > :global(:nth-child(n + 4)) {
+    animation-delay: 110ms;
+  }
   header {
     display: flex;
     align-items: center;

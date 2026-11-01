@@ -3,7 +3,7 @@
   import Icon from '../../lib/components/Icon.svelte';
   import WebPane from '../../lib/components/WebPane.svelte';
   import WindowControls from '../../lib/components/WindowControls.svelte';
-  import { enter } from '../../lib/motion';
+  import { enter, glide, stagger } from '../../lib/motion';
   import { account } from '../../lib/state/account.svelte';
   import { auth } from '../../lib/state/auth.svelte';
   import { router } from '../../lib/state/router.svelte';
@@ -17,6 +17,7 @@
   let query = $state('');
   let content = $state<HTMLElement>();
   let inner = $state<HTMLElement>();
+  let heading = $state<HTMLElement>();
 
   const current = $derived(ALL_SECTIONS.find((s) => s.id === router.section) ?? ALL_SECTIONS[0]!);
   /** Epic's page shown in this section, if any (the Store shows its own). */
@@ -50,11 +51,17 @@
     content?.scrollTo({ top: 0 });
   }
 
-  // Another section (or back from Epic's page) while Settings is open: its page fades up.
+  // A section's page: its heading slides in and its cards follow one after another.
+  function reveal() {
+    enter(heading, 4);
+    if (inner) stagger(inner.children);
+  }
+
+  // Another section (or back from Epic's page) while Settings is open: its page plays in.
   let seen = '';
   $effect(() => {
     const now = router.route === 'settings' ? `${current.id}|${!!web}` : '';
-    if (seen && now && now !== seen) void tick().then(() => enter(inner, 6));
+    if (seen && now && now !== seen) void tick().then(() => reveal());
     seen = now;
   });
 
@@ -75,7 +82,7 @@
 <div class="settings">
   <nav class="side panel" aria-label="Settings sections">
     <div class="drag" data-tauri-drag-region></div>
-    <button class="back" onclick={() => router.go('library')}>
+    <button class="back lean-l" onclick={() => router.go('library')}>
       <Icon name="chevronLeft" size={20} /> Library
     </button>
     <h1 class="title">Settings</h1>
@@ -84,7 +91,7 @@
       <input type="search" placeholder="Search settings" aria-label="Search settings" bind:value={query} />
     </div>
 
-    <div class="sections">
+    <div class="sections" use:glide={{ selector: '[aria-current="page"]', key: `${router.section}|${query}` }}>
       {#each SECTIONS as group, gi (gi)}
         <ul class="group">
           {#each group as s (s.id)}
@@ -108,14 +115,14 @@
     <div class="bar" data-tauri-drag-region>
       {#if web}
         <div class="crumbs" data-tauri-drag-region>
-          <button class="up" onclick={() => (router.web = null)}>
+          <button class="up lean-l" onclick={() => (router.web = null)}>
             <Icon name="chevronLeft" size={20} />
             {current.label}
           </button>
           <h2 class="h" data-tauri-drag-region>{web.title}</h2>
         </div>
       {:else}
-        <h2 class="h" data-tauri-drag-region>{query ? 'Search results' : current.label}</h2>
+        <h2 class="h" data-tauri-drag-region bind:this={heading}>{query ? 'Search results' : current.label}</h2>
       {/if}
       <WindowControls />
     </div>
@@ -212,6 +219,7 @@
     padding-left: 0;
   }
   .sections {
+    position: relative;
     overflow-y: auto;
     min-height: 0;
     display: flex;
@@ -227,6 +235,7 @@
     background: var(--surface-inset);
   }
   .sec {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -241,6 +250,18 @@
   }
   .sec[aria-current='page'] {
     background: var(--selected-strong);
+  }
+  :global(.glides) .sec[aria-current='page'] {
+    background: transparent;
+  }
+  .sec .tile {
+    transition: transform var(--dur) var(--ease-spring);
+  }
+  .sec:hover .tile {
+    transform: scale(1.08);
+  }
+  .sec[aria-current='page'] .tile {
+    transform: scale(1.06);
   }
   .tile {
     display: grid;

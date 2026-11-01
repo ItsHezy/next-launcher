@@ -2,6 +2,7 @@
   import Cover from '../../lib/components/Cover.svelte';
   import Icon from '../../lib/components/Icon.svelte';
   import { storeName } from '../../lib/format';
+  import { bump } from '../../lib/motion';
   import { library, type Game } from '../../lib/state/library.svelte';
 
   let {
@@ -16,6 +17,24 @@
   const external = $derived(!installed && !!game.thirdParty);
   const unavailable = $derived(!installed && !game.installable && !game.thirdParty);
   const store = $derived(game.thirdParty ? storeName(game.thirdParty) : '');
+  // One line under the title; it bumps when it changes (installed, started, updated…).
+  const status = $derived(
+    playing
+      ? { text: 'Playing', tone: 'active' }
+      : starting
+        ? { text: 'Starting…', tone: 'active' }
+        : game.state === 'installed'
+          ? { text: 'Ready', tone: 'ready' }
+          : game.state === 'updateAvailable'
+            ? { text: 'Update available', tone: 'update' }
+            : game.state === 'installing'
+              ? { text: 'Installing', tone: 'active' }
+              : external
+                ? { text: `Opens in ${store}`, tone: 'muted' }
+                : unavailable
+                  ? { text: 'Not on Windows', tone: 'muted' }
+                  : { text: 'Not installed', tone: 'muted' },
+  );
   const action = $derived(
     external
       ? `Open in ${store}:`
@@ -42,23 +61,9 @@
   <div class="meta">
     <div class="txt">
       <div class="name" title={game.title}>{game.title}</div>
-      {#if playing}
-        <div class="st status-active"><span class="live" aria-hidden="true"></span>Playing</div>
-      {:else if starting}
-        <div class="st status-active">Starting…</div>
-      {:else if game.state === 'installed'}
-        <div class="st status-ready">Ready</div>
-      {:else if game.state === 'updateAvailable'}
-        <div class="st status-update">Update available</div>
-      {:else if game.state === 'installing'}
-        <div class="st status-active">Installing</div>
-      {:else if external}
-        <div class="st status-muted">Opens in {store}</div>
-      {:else if unavailable}
-        <div class="st status-muted">Not on Windows</div>
-      {:else}
-        <div class="st status-muted">Not installed</div>
-      {/if}
+      <div class="st status-{status.tone}" use:bump={status.text}>
+        {#if playing}<span class="live" aria-hidden="true"></span>{/if}{status.text}
+      </div>
     </div>
     <button
       class="round"
@@ -86,10 +91,13 @@
     border-radius: var(--radius-md);
     overflow: hidden;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-    transition: transform var(--dur) var(--ease-spring);
+    transition:
+      transform var(--dur) var(--ease-spring),
+      box-shadow var(--dur) var(--ease-out);
   }
   .tile:hover .art {
-    transform: translateY(-3px);
+    transform: translateY(-4px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.36);
   }
   .tile:hover .art :global(img) {
     transform: scale(1.04);
@@ -112,6 +120,7 @@
   }
   .st {
     font-size: 12.5px;
+    transform-origin: left center;
   }
   .round {
     flex: none;
@@ -128,6 +137,7 @@
   }
   .round:hover:not(:disabled) {
     background: var(--selected-strong);
+    transform: scale(1.08);
   }
   .round.play {
     background: var(--accent-fill);

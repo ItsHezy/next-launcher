@@ -40,6 +40,13 @@
     overflow: hidden;
     background: var(--surface);
     isolation: isolate;
+    transition:
+      transform var(--dur) var(--ease-spring),
+      box-shadow var(--dur) var(--ease-out);
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.36);
   }
   .card:hover :global(.cover img) {
     transform: scale(1.03);

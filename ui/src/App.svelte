@@ -83,7 +83,7 @@
                 <View />
               {:else}
                 <div class="skeleton" aria-busy="true" aria-label="Loading">
-                  {#each Array(10) as _, i (i)}<div class="sk"></div>{/each}
+                  {#each Array(10) as _, i (i)}<div class="sk shimmer"></div>{/each}
                 </div>
               {/if}
             </section>
@@ -194,18 +194,8 @@
     padding: 96px 32px;
   }
   .sk {
-    position: relative;
-    overflow: hidden;
     aspect-ratio: 3 / 4;
     border-radius: var(--radius-md);
-    background: var(--surface);
-  }
-  .sk::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(100deg, transparent 25%, rgba(255, 255, 255, 0.05) 50%, transparent 75%);
-    animation: sheen 1.4s ease-in-out infinite;
   }
   .boot-error {
     position: fixed;

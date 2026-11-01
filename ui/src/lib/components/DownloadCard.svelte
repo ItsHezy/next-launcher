@@ -2,6 +2,7 @@
   import { num } from '../boot';
   import { commands, type DownloadRow } from '../bindings';
   import { bytes, duration, speed } from '../format';
+  import { bump } from '../motion';
   import { library } from '../state/library.svelte';
   import { ui } from '../state/ui.svelte';
   import Icon from './Icon.svelte';
@@ -41,7 +42,7 @@
   >
     <span style:width="{pct}%"><i class="sheen" class:on={!paused && !failed && phase !== 'queued'}></i></span>
   </div>
-  <div class="meta">
+  <div class="meta" use:bump={failed ? 'failed' : paused ? 'paused' : phase}>
     {#if failed}
       <span class="err">Stopped</span>
     {:else if paused}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from '../../lib/components/Icon.svelte';
   import WebPane from '../../lib/components/WebPane.svelte';
-  import { appear, enter } from '../../lib/motion';
+  import { appear, enter, glide, rise } from '../../lib/motion';
   import { router } from '../../lib/state/router.svelte';
   import { store, type Chip, type Offer } from '../../lib/state/store.svelte';
   import ProductView from './ProductView.svelte';
@@ -66,6 +66,19 @@
 
 <svelte:window onkeydown={onkey} />
 
+{#snippet loadingGrid(label: string)}
+  <div class="grid" role="status">
+    <span class="sr-only">{label}</span>
+    {#each Array(6) as _, i (i)}
+      <div aria-hidden="true">
+        <div class="shimmer sk-art"></div>
+        <div class="shimmer sk-line"></div>
+        <div class="shimmer sk-line short"></div>
+      </div>
+    {/each}
+  </div>
+{/snippet}
+
 {#snippet grid(offers: Offer[], label: string)}
   <ul class="grid" aria-label={label}>
     {#each offers as o (o.namespace + o.id)}
@@ -77,7 +90,7 @@
 {#if web}
   <div class="web panel" use:appear>
     <div class="bar">
-      <button class="up" onclick={() => (router.web = null)}>
+      <button class="up lean-l" onclick={() => (router.web = null)}>
         <Icon name="chevronLeft" size={20} />
         <span>{store.product?.title ?? 'Store'}</span>
       </button>
@@ -96,7 +109,13 @@
       <h1>Store</h1>
     </header>
 
-    <div class="chips" role="toolbar" aria-label="Store categories">
+    <div
+      class="chips"
+      role="toolbar"
+      aria-label="Store categories"
+      style:--glide-radius="999px"
+      use:glide={{ selector: '[aria-pressed="true"]', key: `${store.chip}|${store.searching}` }}
+    >
       {#each chips as c (c.value)}
         <button
           class="chip"
@@ -119,20 +138,22 @@
       {#if store.featured}
         {#each sections as s (s.id)}
           <section class="section" aria-labelledby="sec-{s.id}">
-            <div class="sec-head">
+            <div class="sec-head" use:rise>
               <h2 id="sec-{s.id}">{s.title}</h2>
-              <button class="link" onclick={() => store.setChip(s.chip)}>See all <Icon name="chevronRight" size={16} /></button>
+              <button class="link lean-r" onclick={() => store.setChip(s.chip)}>See all <Icon name="chevronRight" size={16} /></button>
             </div>
             {@render grid(s.offers, s.title)}
           </section>
         {/each}
       {:else}
-        <p class="empty">Loading the store…</p>
+        {@render loadingGrid('Loading the store…')}
       {/if}
     {:else}
       <h2 class="sub">{heading}</h2>
-      {#if store.offers.length === 0}
-        <p class="empty">{store.loading ? 'Loading…' : store.searching ? 'No games match your search.' : 'Nothing here right now.'}</p>
+      {#if store.offers.length === 0 && store.loading}
+        {@render loadingGrid('Loading…')}
+      {:else if store.offers.length === 0}
+        <p class="empty">{store.searching ? 'No games match your search.' : 'Nothing here right now.'}</p>
       {:else}
         {@render grid(store.offers, heading ?? 'Games')}
         {#if more}
@@ -202,12 +223,14 @@
     margin-bottom: 20px;
   }
   .chips {
+    position: relative;
     display: flex;
     gap: 8px;
     margin-bottom: 24px;
     flex-wrap: wrap;
   }
   .chip {
+    position: relative;
     min-height: var(--hit);
     padding: 0 18px;
     border-radius: 999px;
@@ -223,6 +246,9 @@
     background: var(--selected-strong);
     color: var(--text);
     font-weight: 600;
+  }
+  :global(.glides) .chip[aria-pressed='true'] {
+    background: transparent;
   }
   .section {
     margin-bottom: 36px;
@@ -263,6 +289,20 @@
   }
   .grid li {
     min-width: 0;
+  }
+  .sk-art {
+    aspect-ratio: 3 / 4;
+    margin-bottom: 12px;
+    border-radius: var(--radius-md);
+  }
+  .sk-line {
+    width: 80%;
+    height: 12px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+  }
+  .sk-line.short {
+    width: 45%;
   }
   .more {
     display: flex;

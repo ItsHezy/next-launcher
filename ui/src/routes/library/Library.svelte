@@ -5,7 +5,7 @@
   import Icon from '../../lib/components/Icon.svelte';
   import * as actions from '../../lib/gameActions';
   import { ago } from '../../lib/format';
-  import { drop } from '../../lib/motion';
+  import { bump, drop, fade, slide } from '../../lib/motion';
   import { auth } from '../../lib/state/auth.svelte';
   import Segmented from '../../lib/components/Segmented.svelte';
   import { library, type Filter, type Game, type Sort } from '../../lib/state/library.svelte';
@@ -71,11 +71,13 @@
   <header class="head">
     <div class="title">
       <h1>Library</h1>
-      <span class="count">{library.counts.all} {library.counts.all === 1 ? 'game' : 'games'}</span>
+      <span class="count" use:bump={library.counts.all}>{library.counts.all} {library.counts.all === 1 ? 'game' : 'games'}</span>
     </div>
     <div class="tools">
       {#if auth.signedIn}
-        <span class="sync" class:err={!!library.sync.error && !library.sync.syncing} aria-live="polite">{syncLine}</span>
+        <span class="sync" class:err={!!library.sync.error && !library.sync.syncing} aria-live="polite" use:bump={library.sync.syncing}
+          >{syncLine}</span
+        >
         <button
           class="icon-btn"
           class:spin={library.sync.syncing}
@@ -97,7 +99,7 @@
   </header>
 
   {#if showRecent}
-    <section aria-labelledby="recent-h" class="recent-section">
+    <section aria-labelledby="recent-h" class="recent-section" in:slide={{ y: 12 }}>
       <h2 id="recent-h">Recently played</h2>
       <div class="recent">
         {#each library.recentGames as g (g.appName)}
@@ -113,7 +115,7 @@
       <span class="sub">{games.length}</span>
     </h2>
     {#if games.length === 0}
-      <p class="empty">
+      <p class="empty" in:fade>
         {library.query
           ? 'No games match your search.'
           : library.filter === 'updates'
@@ -185,6 +187,7 @@
     gap: 8px;
   }
   .sync {
+    transform-origin: right center;
     font-size: 13px;
     color: var(--text-3);
     max-width: 320px;
@@ -209,6 +212,8 @@
     gap: 12px;
   }
   .count {
+    display: inline-block;
+    transform-origin: left center;
     color: var(--text-2);
     font-variant-numeric: tabular-nums;
   }

@@ -59,9 +59,18 @@
     border-radius: 50%;
     background: #fff;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-    transition: transform var(--dur) var(--ease-spring);
+    transition:
+      transform var(--dur) var(--ease-spring),
+      width var(--dur) var(--ease-spring);
   }
   .switch[aria-checked='true'] .knob {
     transform: translateX(20px);
+  }
+  /* Pressed: the knob stretches toward where it's going. */
+  .switch:active:not(:disabled) .knob {
+    width: 32px;
+  }
+  .switch[aria-checked='true']:active:not(:disabled) .knob {
+    transform: translateX(14px);
   }
 </style>
