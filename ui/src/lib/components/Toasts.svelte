@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { shift, slide } from '../motion';
   import { ui } from '../state/ui.svelte';
 </script>
 
 <div class="toasts" role="status" aria-live="polite">
   {#each ui.toasts as t (t.id)}
-    <div class="toast">{t.text}</div>
+    <div class="toast" out:slide animate:shift>{t.text}</div>
   {/each}
 </div>
 

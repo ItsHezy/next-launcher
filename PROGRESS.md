@@ -33,6 +33,13 @@
   styling no longer runs inside frames (payment, human checks stay Epic's). Verified live (nothing
   on Epic's pages pressed): checkout of a free giveaway, product page, wishlist, sign-in page in a
   signed-out folder and cancelling it. A completed sign-in still needs the owner to try.
+- **Animations** (ADR 0018): the tab bar and library filters slide their selection; sections,
+  Settings and its pages fade or zoom into place; library tiles and store cards play in one after
+  another on a new filter or as they load; cover art fades in and zooms under the pointer; dialogs,
+  menus, popovers, toasts, Quick Launch games and the download card animate in and out; a working
+  download's bar has a moving light, "Playing" a pulsing dot. New setting General › Appearance ›
+  Animations: Match Windows (default), On, Off. The owner's Windows has animation effects off, so
+  On is needed there to see any motion. Verified live in the dev build.
 
 ## Phase 9 summary (what doesn't need the owner)
 

@@ -8,6 +8,7 @@
   // see our layout, so the box reports where it is; the view steps aside while a menu or dialog
   // is open, because it always draws above the app's own content.
   import { commands, type PaneBounds, type PaneTarget } from '../bindings';
+  import { SETTLED } from '../motion';
   import { settings } from '../state/settings.svelte';
   import { ui } from '../state/ui.svelte';
 
@@ -37,7 +38,8 @@
     });
   });
 
-  // Follow the box when the window or the layout changes.
+  // Follow the box when the window or the layout changes, and once the app's motion ends (a
+  // section fading up moves the box for a moment, and the view may have opened meanwhile).
   $effect(() => {
     if (!box) return;
     let frame = 0;
@@ -51,10 +53,12 @@
     const ro = new ResizeObserver(follow);
     ro.observe(box);
     window.addEventListener('resize', follow);
+    window.addEventListener(SETTLED, follow);
     return () => {
       cancelAnimationFrame(frame);
       ro.disconnect();
       window.removeEventListener('resize', follow);
+      window.removeEventListener(SETTLED, follow);
     };
   });
 

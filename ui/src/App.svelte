@@ -1,15 +1,16 @@
 <script lang="ts">
-  import type { Component } from 'svelte';
+  import { tick, type Component } from 'svelte';
   import { boot } from './lib/boot';
   import Sidebar from './lib/components/Sidebar.svelte';
   import Toasts from './lib/components/Toasts.svelte';
   import TopBar from './lib/components/TopBar.svelte';
+  import { enter, zoom } from './lib/motion';
   import { router, type Route } from './lib/state/router.svelte';
-  import { applyAccent } from './lib/state/settings.svelte';
+  import { applyAppearance } from './lib/state/settings.svelte';
   import { ui } from './lib/state/ui.svelte';
   import Library from './routes/library/Library.svelte';
 
-  applyAccent();
+  applyAppearance();
 
   type Lazy = Exclude<Route, 'library'>;
   const loaders: Record<Lazy, () => Promise<{ default: Component }>> = {
@@ -43,21 +44,41 @@
   });
 
   const lazyMain: Lazy[] = ['store', 'unreal', 'fab'];
+
+  let shell = $state<HTMLDivElement>();
+  let full = $state<HTMLDivElement>();
+  let sections = $state<HTMLElement>();
+
+  // Moving to another section: Settings opens over the app and the app comes back from under
+  // it; the main sections fade up into place.
+  let shown: Route = router.route;
+  $effect(() => {
+    const to = router.route;
+    const from = shown;
+    if (to === from) return;
+    shown = to;
+    // Once a section visited for the first time is in the page.
+    void tick().then(() => {
+      if (to === 'settings') zoom(full, 0.985);
+      else if (from === 'settings') zoom(shell, 1.015);
+      else enter(sections?.querySelector(`[data-route="${to}"]`));
+    });
+  });
 </script>
 
 <div class="app">
-  <div class="shell" hidden={router.route === 'settings'}>
+  <div class="shell" hidden={router.route === 'settings'} bind:this={shell}>
     <Sidebar />
     <div class="right">
       <TopBar />
-      <main class="views">
-        <section class="view" hidden={router.route !== 'library'} aria-label="Library">
+      <main class="views" bind:this={sections}>
+        <section class="view" data-route="library" hidden={router.route !== 'library'} aria-label="Library">
           <Library />
         </section>
         {#each lazyMain as r (r)}
           {#if router.visited[r]}
             {@const View = views[r]}
-            <section class="view" hidden={router.route !== r} aria-label={VIEW_LABELS[r]}>
+            <section class="view" data-route={r} hidden={router.route !== r} aria-label={VIEW_LABELS[r]}>
               {#if View}
                 <View />
               {:else}
@@ -74,7 +95,7 @@
 
   {#if router.visited.settings}
     {@const SettingsView = views.settings}
-    <div class="full" hidden={router.route !== 'settings'}>
+    <div class="full" hidden={router.route !== 'settings'} bind:this={full}>
       {#if SettingsView}<SettingsView />{/if}
     </div>
   {/if}
@@ -173,9 +194,18 @@
     padding: 96px 32px;
   }
   .sk {
+    position: relative;
+    overflow: hidden;
     aspect-ratio: 3 / 4;
     border-radius: var(--radius-md);
     background: var(--surface);
+  }
+  .sk::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 25%, rgba(255, 255, 255, 0.05) 50%, transparent 75%);
+    animation: sheen 1.4s ease-in-out infinite;
   }
   .boot-error {
     position: fixed;

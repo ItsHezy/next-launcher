@@ -185,7 +185,23 @@ export const SECTIONS: Section[][] = [
             },
           ],
         },
-        { title: 'Appearance', rows: [{ kind: 'accent', label: 'Accent color' }] },
+        {
+          title: 'Appearance',
+          rows: [
+            { kind: 'accent', label: 'Accent color' },
+            {
+              kind: 'select',
+              label: 'Animations',
+              desc: 'Movement between pages, menus and cards. Match Windows follows “Animation effects” in Windows settings',
+              key: 'general.animations',
+              options: [
+                { value: 'system', label: 'Match Windows' },
+                { value: 'on', label: 'On' },
+                { value: 'off', label: 'Off' },
+              ],
+            },
+          ],
+        },
       ],
     },
     {

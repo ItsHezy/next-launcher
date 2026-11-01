@@ -12,6 +12,7 @@ export const DEFAULTS = {
   'general.showUninstalled': true,
   'general.defaultSort': 'title',
   'general.accent': '#0A6FD6',
+  'general.animations': 'system',
   'downloads.installDir': 'C:\\Games',
   'downloads.limitMbps': 0,
   'downloads.pauseWhilePlaying': true,
@@ -77,9 +78,12 @@ class SettingsState {
 
 export const settings = new SettingsState();
 
-/** Apply the accent token whenever it changes. */
-export function applyAccent() {
+/** Apply the accent token and the animations switch whenever they change. */
+export function applyAppearance() {
   $effect(() => {
     document.documentElement.style.setProperty('--accent', settings.get('general.accent'));
+  });
+  $effect(() => {
+    document.documentElement.dataset.motion = settings.get('general.animations');
   });
 }

@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { dismiss, menuKeys } from '../../lib/actions';
   import AuthBanner from '../../lib/components/AuthBanner.svelte';
   import Icon from '../../lib/components/Icon.svelte';
   import * as actions from '../../lib/gameActions';
   import { ago } from '../../lib/format';
+  import { drop } from '../../lib/motion';
   import { auth } from '../../lib/state/auth.svelte';
   import Segmented from '../../lib/components/Segmented.svelte';
   import { library, type Filter, type Game, type Sort } from '../../lib/state/library.svelte';
@@ -26,6 +28,16 @@
   ]);
 
   const play = (g: Game) => void actions.play(g);
+
+  // Showing other games (a filter, the sort, the first games arriving) plays the grid in;
+  // updates in place (sync, installs) and typing a search don't.
+  let reveal = $state(0);
+  let showing = '';
+  $effect(() => {
+    const now = [library.filter, sort, settings.get('general.showUninstalled'), games.length > 0].join('|');
+    if (showing && now !== showing) untrack(() => reveal++);
+    showing = now;
+  });
 
   async function refresh() {
     const err = await library.refresh();
@@ -113,7 +125,7 @@
                 : 'Sign in to see your games.'}
       </p>
     {:else}
-      <GameGrid {games} {scroller} onplay={play} onmenu={openMenu} />
+      <GameGrid {games} {scroller} {reveal} onplay={play} onmenu={openMenu} />
     {/if}
   </section>
 </div>
@@ -122,6 +134,7 @@
   {@const g = menu.game}
   <div
     class="menu ctx"
+    out:drop
     role="menu"
     aria-label="{g.title} options"
     style:left="{menu.x}px"

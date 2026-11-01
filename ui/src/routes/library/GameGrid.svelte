@@ -1,16 +1,21 @@
 <script lang="ts">
   // Virtualised 3:4 grid: only visible rows (+ overscan) are in the DOM.
+  import { tick } from 'svelte';
+  import { stagger } from '../../lib/motion';
   import type { Game } from '../../lib/state/library.svelte';
   import GameTile from './GameTile.svelte';
 
   let {
     games,
     scroller,
+    reveal = 0,
     onplay,
     onmenu,
   }: {
     games: Game[];
     scroller: HTMLElement | undefined;
+    /** Changes when the tiles on screen should play in (never while scrolling). */
+    reveal?: number;
     onplay: (g: Game) => void;
     onmenu: (g: Game, x: number, y: number) => void;
   } = $props();
@@ -65,6 +70,20 @@
       s.removeEventListener('scroll', onScroll);
       if (raf) cancelAnimationFrame(raf);
     };
+  });
+
+  // The tiles in view, row by row, once the new list is in the page.
+  $effect(() => {
+    if (!reveal) return;
+    void tick().then(() => {
+      const view = scroller?.getBoundingClientRect();
+      if (!el || !view?.height) return;
+      const tiles = [...el.querySelectorAll('[role="listitem"]')].filter((t) => {
+        const r = t.getBoundingClientRect();
+        return r.bottom > view.top && r.top < view.bottom;
+      });
+      stagger(tiles);
+    });
   });
 
   // Content above the grid (e.g. the recent row) can change height.

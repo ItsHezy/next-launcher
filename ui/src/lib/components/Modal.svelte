@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { fade, pop } from '../motion';
   import Icon from './Icon.svelte';
 
   let {
@@ -42,8 +43,9 @@
 
 <svelte:window onkeydown={onkey} />
 
-<div class="backdrop" role="presentation" onclick={(e) => e.target === e.currentTarget && !busy && onclose()}>
+<div class="backdrop" role="presentation" out:fade|global onclick={(e) => e.target === e.currentTarget && !busy && onclose()}>
   <div
+    out:pop|global
     class="dialog"
     role="dialog"
     aria-modal="true"

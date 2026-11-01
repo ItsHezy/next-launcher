@@ -43,7 +43,7 @@
     <div class="txt">
       <div class="name" title={game.title}>{game.title}</div>
       {#if playing}
-        <div class="st status-active">Playing</div>
+        <div class="st status-active"><span class="live" aria-hidden="true"></span>Playing</div>
       {:else if starting}
         <div class="st status-active">Starting…</div>
       {:else if game.state === 'installed'}
@@ -90,6 +90,9 @@
   }
   .tile:hover .art {
     transform: translateY(-3px);
+  }
+  .tile:hover .art :global(img) {
+    transform: scale(1.04);
   }
   .meta {
     display: flex;

@@ -2,6 +2,7 @@
   import { num } from '../boot';
   import { library } from '../state/library.svelte';
   import * as actions from '../gameActions';
+  import { shift, slide } from '../motion';
   import { router } from '../state/router.svelte';
   import Cover from './Cover.svelte';
   import DownloadCard from './DownloadCard.svelte';
@@ -23,7 +24,7 @@
   {:else}
     <ul class="ql" aria-labelledby="ql-heading">
       {#each library.pinned as g (g.appName)}
-        <li>
+        <li in:slide|global={{ x: -12, y: 0 }} out:slide={{ x: -12, y: 0 }} animate:shift>
           <button
             class="ql-item"
             onclick={() => void actions.play(g)}
@@ -32,7 +33,7 @@
             <span class="txt">
               <span class="name">{g.title}</span>
               {#if library.running.has(g.appName)}
-                <span class="st status-active">Playing</span>
+                <span class="st status-active"><span class="live" aria-hidden="true"></span>Playing</span>
               {:else if library.starting.has(g.appName)}
                 <span class="st status-active">Starting…</span>
               {:else if g.state === 'installed'}
@@ -54,7 +55,9 @@
   <div class="flex"></div>
 
   {#if library.download}
-    <DownloadCard dl={library.download} />
+    <div transition:slide>
+      <DownloadCard dl={library.download} />
+    </div>
   {/if}
 
   <button class="settings-link" onclick={() => router.go('settings', 'general')}>

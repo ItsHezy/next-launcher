@@ -1,5 +1,6 @@
 <script lang="ts">
   import { menuKeys } from '../actions';
+  import { drop } from '../motion';
   import { account } from '../state/account.svelte';
   import { auth } from '../state/auth.svelte';
   import { router, type SettingsSection } from '../state/router.svelte';
@@ -63,7 +64,7 @@
   ];
 </script>
 
-<div class="menu profile" role="menu" aria-label="Profile" use:menuKeys>
+<div class="menu profile" out:drop|global role="menu" aria-label="Profile" use:menuKeys>
   <div class="head">
     <Avatar {name} size={44} />
     <div class="who">

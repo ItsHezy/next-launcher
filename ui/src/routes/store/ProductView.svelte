@@ -4,6 +4,7 @@
   import { num } from '../../lib/boot';
   import Icon from '../../lib/components/Icon.svelte';
   import Markdown from '../../lib/components/Markdown.svelte';
+  import { arrive } from '../../lib/motion';
   import { library } from '../../lib/state/library.svelte';
   import { router } from '../../lib/state/router.svelte';
   import { freeLabel, store, type Offer } from '../../lib/state/store.svelte';
@@ -53,7 +54,7 @@
   });
 </script>
 
-<div class="product">
+<div class="product" use:arrive>
   <button class="back btn btn-quiet" onclick={() => (store.product = null)}>
     <Icon name="chevronLeft" size={18} /> Store
   </button>

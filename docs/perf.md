@@ -8,6 +8,18 @@ AMD Ryzen 5 5600X (6C/12T), 32 GB RAM, NVMe SSD, RTX 3060 Ti, 200 Hz display, Wi
 10.0.26200, WebView2 runtime 156.0.4314.50. That's upper mid-range; numbers on a true mid-range PC
 will be somewhat higher.
 
+## Animations (2026-11-01, ADR 0018)
+
+Release build, `--bench-scroll --mock-games 600`, Settings › General › Animations **On** (worst
+case: cover art fades as tiles mount while scrolling).
+
+| Metric | Budget | Measured |
+|---|---|---|
+| Library scroll, 600 games | 60 fps | **198.4 fps** mean (5.04 ms/frame, 200 Hz), p99 5.1 ms, 2/359 frames > 1.5× vsync ✅ (unchanged) |
+| Tab switch (DOM shown; the fade-up plays after it) | ≤ 50 ms | **7.7–12.9 ms** ✅ |
+| Initial / total JS (gz) | 80 / 250 KB | **42.6 / 77.9 KB** ✅ (+3.4 / +3.9 KB: Svelte transitions, flip, `motion.ts`) |
+| Accessibility (axe-core, 17 views) | 0 serious | **0 violations** ✅ |
+
 ## Phase 9 (2026-10-30): polish
 
 | Metric | Budget | Measured |

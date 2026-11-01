@@ -1,5 +1,6 @@
 <script lang="ts">
   import { num } from '../../lib/boot';
+  import { rise } from '../../lib/motion';
   import { freeLabel, store, type Offer } from '../../lib/state/store.svelte';
 
   let { offer }: { offer: Offer } = $props();
@@ -10,13 +11,27 @@
   const freeNow = $derived(!!offer.freeFrom && Date.parse(offer.freeFrom) <= Date.now());
   const priceText = $derived(freeNow || price?.free ? 'Free' : (price?.fmtCurrent ?? ''));
   let failed = $state(false);
+  // Art fades in as it arrives; art that is already there (cached) just shows.
+  let shown = $state(false);
+  const ready = (img: HTMLImageElement) => {
+    if (img.complete && img.naturalWidth > 0) shown = true;
+  };
 </script>
 
 <!-- The visible text (title, seller, badge, price) is the button's name: no aria-label. -->
-<button class="card" onclick={() => store.open(offer)}>
+<button class="card" use:rise onclick={() => store.open(offer)}>
   <span class="art">
     {#if offer.imageTall && !failed}
-      <img src={offer.imageTall} alt="" loading="lazy" decoding="async" onerror={() => (failed = true)} />
+      <img
+        src={offer.imageTall}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        class:shown
+        use:ready
+        onload={() => (shown = true)}
+        onerror={() => (failed = true)}
+      />
     {:else}
       <span class="ph" aria-hidden="true">{offer.title}</span>
     {/if}
@@ -65,6 +80,16 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    opacity: 0;
+    transition:
+      opacity var(--dur-slow) var(--ease-out),
+      transform 420ms var(--ease-out);
+  }
+  img.shown {
+    opacity: 1;
+  }
+  .card:hover img {
+    transform: scale(1.04);
   }
   .ph {
     position: absolute;

@@ -13,6 +13,34 @@
   }: { options: Option[]; value: T; onchange: (v: T) => void; label: string; size?: 'md' | 'sm' } = $props();
 
   let el: HTMLDivElement;
+  /** The selection: one pill that slides to the chosen option. */
+  let thumb = $state<{ x: number; w: number } | null>(null);
+  let sliding = $state(false);
+
+  function place() {
+    const b = el?.querySelector<HTMLElement>('[aria-selected="true"]');
+    // Hidden (a view not on screen): measure again when it shows.
+    if (!b || b.offsetWidth === 0) return;
+    thumb = { x: b.offsetLeft, w: b.offsetWidth };
+  }
+
+  // A new choice, or labels and counts that change the widths.
+  $effect(() => {
+    void value;
+    void options;
+    place();
+  });
+  $effect(() => {
+    const ro = new ResizeObserver(place);
+    ro.observe(el);
+    for (const b of el.querySelectorAll('button')) ro.observe(b);
+    // Placed where it belongs first, then it slides.
+    const frame = requestAnimationFrame(() => (sliding = true));
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  });
 
   function key(e: KeyboardEvent) {
     const i = options.findIndex((o) => o.value === value);
@@ -30,7 +58,10 @@
   }
 </script>
 
-<div class="seg {size}" role="tablist" aria-label={label} bind:this={el} onkeydown={key} tabindex="-1">
+<div class="seg {size}" class:thumbed={!!thumb} role="tablist" aria-label={label} bind:this={el} onkeydown={key} tabindex="-1">
+  {#if thumb}
+    <span class="thumb" class:sliding aria-hidden="true" style:transform="translateX({thumb.x}px)" style:width="{thumb.w}px"></span>
+  {/if}
   {#each options as o (o.value)}
     <button
       role="tab"
@@ -46,13 +77,28 @@
 
 <style>
   .seg {
+    position: relative;
     display: inline-flex;
     gap: 2px;
     padding: 3px;
     background: var(--control);
     border-radius: 999px;
   }
+  .thumb {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 0;
+    border-radius: 999px;
+    background: var(--selected-strong);
+  }
+  .thumb.sliding {
+    transition:
+      transform var(--dur-slow) var(--ease-spring),
+      width var(--dur-slow) var(--ease-spring);
+  }
   button {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -76,6 +122,9 @@
     background: var(--selected-strong);
     color: var(--text);
     font-weight: 600;
+  }
+  .thumbed button[aria-selected='true'] {
+    background: transparent;
   }
   .count {
     font-size: 12px;

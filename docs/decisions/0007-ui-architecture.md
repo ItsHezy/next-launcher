@@ -21,7 +21,8 @@ Status: Accepted (2026-10-28)
 - **Virtualised grid**: only visible rows + 2 overscan rows are in the DOM (25 tiles for 600 games).
 - **Accessibility**: every clickable element is a `<button>`/`<a>` with a visible focus ring and
   a ≥ 44 px hit area; menus support arrow keys, Home/End and Escape; motion is disabled under
-  `prefers-reduced-motion`; contrast rules are in `docs/perf.md`.
+  `prefers-reduced-motion` (unless Settings › General › Animations is On, ADR 0018); contrast
+  rules are in `docs/perf.md`.
 
 Interpretations of the brief (flag if wrong):
 - "Settings → General → hide library" is implemented as a **Hidden games** list.

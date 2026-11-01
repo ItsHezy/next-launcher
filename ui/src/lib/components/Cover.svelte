@@ -12,6 +12,11 @@
     `${boot.imgBase}/${encodeURIComponent(game.appName)}/${kind === 'thumb' ? 'tall' : kind}?r=${game.artRev}`,
   );
   const h = $derived(game.hue);
+  // Art fades in as it arrives; art that is already there (cached) just shows.
+  let shown = $state(false);
+  const ready = (img: HTMLImageElement) => {
+    if (img.complete && img.naturalWidth > 0) shown = true;
+  };
   const bg = $derived(
     `linear-gradient(${kind === 'wide' ? 120 : 160}deg, hsl(${h} 42% 38%), hsl(${(h + 48) % 360} 48% 17%))`,
   );
@@ -19,7 +24,7 @@
 
 <div class="cover {kind}" style:background={has ? undefined : bg}>
   {#if has}
-    <img {src} alt="" loading="lazy" decoding="async" draggable="false" />
+    <img {src} alt="" loading="lazy" decoding="async" draggable="false" class:shown use:ready onload={() => (shown = true)} />
   {:else if kind !== 'thumb' && label}
     <span class="ph" aria-hidden="true">{game.title}</span>
   {/if}
@@ -48,6 +53,13 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    opacity: 0;
+    transition:
+      opacity var(--dur-slow) var(--ease-out),
+      transform 420ms var(--ease-out);
+  }
+  img.shown {
+    opacity: 1;
   }
   .ph {
     position: absolute;

@@ -26,6 +26,7 @@ import { library } from './lib/state/library.svelte';
 import { router } from './lib/state/router.svelte';
 import { settings } from './lib/state/settings.svelte';
 import { account } from './lib/state/account.svelte';
+import { motion } from './lib/motion';
 
 async function start() {
   // Cap the wait: a broken font must never block the app (timers are throttled
@@ -67,6 +68,9 @@ async function start() {
     const { applyDevRoute } = await import('./lib/dev');
     applyDevRoute(boot.devRoute);
   }
+
+  // From here on, moving around animates (the first screen appears as it is).
+  motion.ready = true;
 
   if (boot.benchScroll) {
     const { runScrollBench } = await import('./lib/bench');

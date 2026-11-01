@@ -41,6 +41,9 @@
     background: var(--surface);
     isolation: isolate;
   }
+  .card:hover :global(.cover img) {
+    transform: scale(1.03);
+  }
   .shade {
     position: absolute;
     inset: 0;

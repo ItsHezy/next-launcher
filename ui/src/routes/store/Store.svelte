@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from '../../lib/components/Icon.svelte';
   import WebPane from '../../lib/components/WebPane.svelte';
+  import { appear, enter } from '../../lib/motion';
   import { router } from '../../lib/state/router.svelte';
   import { store, type Chip, type Offer } from '../../lib/state/store.svelte';
   import ProductView from './ProductView.svelte';
@@ -44,6 +45,14 @@
     scroller?.scrollTo({ top: 0 });
   });
 
+  // Back from Epic's page: the page under it comes back into sight.
+  let wasWeb = false;
+  $effect(() => {
+    const now = !!web;
+    if (wasWeb && !now) enter(scroller, 6);
+    wasWeb = now;
+  });
+
   function openEpic() {
     if (store.searching) store.openEpic({ kind: 'search', query: store.query.trim() }, "Search on Epic's store");
     else store.openEpic({ kind: 'home' }, "Epic's store");
@@ -66,7 +75,7 @@
 {/snippet}
 
 {#if web}
-  <div class="web panel">
+  <div class="web panel" use:appear>
     <div class="bar">
       <button class="up" onclick={() => (router.web = null)}>
         <Icon name="chevronLeft" size={20} />

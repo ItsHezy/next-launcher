@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { tick } from 'svelte';
   import Icon from '../../lib/components/Icon.svelte';
   import WebPane from '../../lib/components/WebPane.svelte';
   import WindowControls from '../../lib/components/WindowControls.svelte';
+  import { enter } from '../../lib/motion';
   import { account } from '../../lib/state/account.svelte';
   import { auth } from '../../lib/state/auth.svelte';
   import { router } from '../../lib/state/router.svelte';
@@ -14,6 +16,7 @@
 
   let query = $state('');
   let content = $state<HTMLElement>();
+  let inner = $state<HTMLElement>();
 
   const current = $derived(ALL_SECTIONS.find((s) => s.id === router.section) ?? ALL_SECTIONS[0]!);
   /** Epic's page shown in this section, if any (the Store shows its own). */
@@ -46,6 +49,14 @@
     router.go('settings', id);
     content?.scrollTo({ top: 0 });
   }
+
+  // Another section (or back from Epic's page) while Settings is open: its page fades up.
+  let seen = '';
+  $effect(() => {
+    const now = router.route === 'settings' ? `${current.id}|${!!web}` : '';
+    if (seen && now && now !== seen) void tick().then(() => enter(inner, 6));
+    seen = now;
+  });
 
   // Searching leaves Epic's page.
   $effect(() => {
@@ -113,7 +124,7 @@
       <WebPane target={web.target} />
     {:else}
       <div class="content" bind:this={content}>
-        <div class="inner">
+        <div class="inner" bind:this={inner}>
           {#if query}
             {#if results.length === 0}
               <p class="empty">No settings match “{query}”.</p>

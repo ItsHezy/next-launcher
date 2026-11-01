@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { EpicPage } from '../bindings';
   import { num } from '../boot';
+  import { drop } from '../motion';
   import { account } from '../state/account.svelte';
   import { auth } from '../state/auth.svelte';
   import { router } from '../state/router.svelte';
@@ -23,7 +24,7 @@
   }
 </script>
 
-<div class="menu wallet" role="dialog" aria-label="Wallet">
+<div class="menu wallet" out:drop|global role="dialog" aria-label="Wallet">
   <div class="balance">
     <span class="label">Wallet balance</span>
     <span class="amount">{w?.balance ?? '—'}</span>

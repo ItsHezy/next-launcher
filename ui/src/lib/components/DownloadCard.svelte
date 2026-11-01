@@ -39,7 +39,7 @@
     aria-valuemax="100"
     aria-valuenow={pct}
   >
-    <span style:width="{pct}%"></span>
+    <span style:width="{pct}%"><i class="sheen" class:on={!paused && !failed && phase !== 'queued'}></i></span>
   </div>
   <div class="meta">
     {#if failed}
@@ -111,11 +111,20 @@
     overflow: hidden;
   }
   .bar span {
+    position: relative;
     display: block;
     height: 100%;
+    overflow: hidden;
     border-radius: inherit;
     background: var(--accent);
     transition: width var(--dur-slow) var(--ease-out);
+  }
+  /* Working: a light runs along the bar. */
+  .sheen.on {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    animation: sheen 1.6s var(--ease-out) infinite;
   }
   .bar.paused span {
     background: var(--text-3);
